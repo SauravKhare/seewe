@@ -2,6 +2,45 @@
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant data-horizontal (&[data-orientation='horizontal']);
+@custom-variant data-vertical (&[data-orientation='vertical']);
+
+/* EB Garamond — used by the resume template only (preview + PDF). */
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/eb-garamond-regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/eb-garamond-medium.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/eb-garamond-semibold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/eb-garamond-bold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/eb-garamond-italic.ttf') format('truetype');
+}
 
 :root {
   --radius: 6px;
@@ -107,6 +146,7 @@
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: 'EB Garamond', ui-serif, Georgia, Cambria, serif;
 
   --text-xs: 0.8125rem;
   --text-xs--line-height: calc(1.125 / 0.8125);
@@ -140,4 +180,34 @@
   html {
     scroll-behavior: auto;
   }
+}
+
+/* Landing-only polish (scoped to the marketing homepage). */
+.landing-solution {
+  background: linear-gradient(180deg, #eef4ff 0%, #f8fbff 100%);
+  border-color: #dfe8f7;
+}
+
+.landing-solution [data-slot='section-label'] {
+  color: #55709b;
+}
+
+.landing-solution [data-slot='resume-solution-icon'] {
+  color: var(--focus);
+  border-color: #bfd1ee;
+  background: #fff;
+}
+
+.dark .landing-solution {
+  background: linear-gradient(180deg, #0f1726 0%, #0c121d 100%);
+  border-color: #1d2b41;
+}
+
+.dark .landing-solution [data-slot='section-label'] {
+  color: #8fb0dd;
+}
+
+.dark .landing-solution [data-slot='resume-solution-icon'] {
+  border-color: #2b3d5e;
+  background: #111c2e;
 }

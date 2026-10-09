@@ -33,8 +33,7 @@ export default function RootLayout({
       <body className={cn(GeistSans.variable, GeistMono.variable)}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
           disableTransitionOnChange
         >
           <TooltipProvider>{children}</TooltipProvider>

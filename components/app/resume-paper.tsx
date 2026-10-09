@@ -1,179 +1,137 @@
-import { formatDateRange } from '@/lib/format'
-import type { ResumeSectionKey, TailoredResumeData } from '@/lib/types'
+import {
+  buildResumeVisual,
+  type VisualEntry,
+  type VisualSection,
+} from '@/lib/resume'
+import type { TailoredResumeData } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-function Heading({ children }: { children: React.ReactNode }) {
+/**
+ * DOM replica of the EB Garamond two-column resume template. Used for every
+ * on-screen preview so what the user sees matches the exported PDF.
+ */
+
+function Entry({ entry }: { entry: VisualEntry }) {
+  const inlineHead = !entry.meta && entry.lines?.length
+  const trailingLines =
+    entry.head && entry.lines?.length
+      ? entry.lines.slice(entry.meta ? 0 : 1)
+      : []
   return (
-    <h5 className="mt-5 mb-2 text-[10px] font-semibold tracking-[0.1em] uppercase">
-      {children}
-    </h5>
+    <div className="mb-[0.6em]">
+      {entry.head ? (
+        <p className="text-[1em] leading-snug font-bold">
+          {entry.head}
+          {inlineHead ? (
+            <span className="font-normal">: {entry.lines?.[0]}</span>
+          ) : null}
+        </p>
+      ) : null}
+      {entry.meta ? (
+        <p className="text-[0.85em] leading-snug text-[#4a4a4a]">
+          {entry.meta}
+        </p>
+      ) : null}
+      {trailingLines.map((line, index) => (
+        <p key={index} className="text-[0.95em] leading-snug">
+          {line}
+        </p>
+      ))}
+      {!entry.head && entry.lines
+        ? entry.lines.map((line, index) => (
+            <p key={index} className="text-[0.95em] leading-snug">
+              {line}
+            </p>
+          ))
+        : null}
+      {entry.body ? (
+        <p className="mt-[0.1em] text-[0.95em] leading-snug">{entry.body}</p>
+      ) : null}
+      {entry.bullets?.length ? (
+        <ul className="mt-[0.15em] space-y-[0.15em]">
+          {entry.bullets.map((bullet, index) => (
+            <li
+              key={index}
+              className="flex gap-[0.5em] text-[0.95em] leading-snug"
+            >
+              <span aria-hidden className="w-[0.6em] shrink-0">
+                •
+              </span>
+              <span className="flex-1">{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   )
 }
 
-function Section({
-  sectionKey,
-  data,
-}: {
-  sectionKey: ResumeSectionKey
-  data: TailoredResumeData
-}) {
-  switch (sectionKey) {
-    case 'summary':
-      return data.summary ? (
-        <>
-          <Heading>Summary</Heading>
-          <p className="text-muted-foreground text-xs">{data.summary}</p>
-        </>
-      ) : null
-
-    case 'experience':
-      if (!data.experience.length) return null
-      return (
-        <>
-          <Heading>Experience</Heading>
-          <div className="space-y-3">
-            {data.experience.map((item, index) => (
-              <div key={index} className="space-y-1">
-                <div className="flex items-baseline justify-between gap-4 text-xs">
-                  <strong>{item.title}</strong>
-                  <span className="text-muted-foreground shrink-0">
-                    {formatDateRange(item.startDate, item.endDate, item.current)}
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  {[item.company, item.location].filter(Boolean).join(' · ')}
-                </p>
-                <ul className="text-muted-foreground space-y-0.5 text-xs">
-                  {item.bullets.map((bullet, i) => (
-                    <li key={i}>- {bullet}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </>
-      )
-
-    case 'education':
-      if (!data.education.length) return null
-      return (
-        <>
-          <Heading>Education</Heading>
-          <div className="space-y-2">
-            {data.education.map((item, index) => (
-              <div key={index} className="text-xs">
-                <strong>
-                  {[item.degree, item.school].filter(Boolean).join(' — ')}
-                </strong>
-                <span className="text-muted-foreground block">
-                  {formatDateRange(item.startDate, item.endDate)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      )
-
-    case 'skills':
-      if (!data.skills.length) return null
-      return (
-        <>
-          <Heading>Skills</Heading>
-          <p className="text-muted-foreground text-xs">
-            {data.skills.map((skill) => skill.name).join(' · ')}
-          </p>
-        </>
-      )
-
-    case 'projects':
-      if (!data.projects.length) return null
-      return (
-        <>
-          <Heading>Projects</Heading>
-          <div className="space-y-2">
-            {data.projects.map((item, index) => (
-              <div key={index} className="text-xs">
-                <strong>{item.name}</strong>
-                {item.description ? (
-                  <span className="text-muted-foreground block">
-                    {item.description}
-                  </span>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </>
-      )
-
-    case 'certifications':
-      if (!data.certifications.length) return null
-      return (
-        <>
-          <Heading>Certifications</Heading>
-          <p className="text-muted-foreground text-xs">
-            {data.certifications
-              .map((item) => [item.name, item.issuer].filter(Boolean).join(' — '))
-              .join(' · ')}
-          </p>
-        </>
-      )
-
-    case 'languages':
-      if (!data.languages.length) return null
-      return (
-        <>
-          <Heading>Languages</Heading>
-          <p className="text-muted-foreground text-xs">
-            {data.languages
-              .map((item) =>
-                item.proficiency ? `${item.name} (${item.proficiency})` : item.name,
-              )
-              .join(' · ')}
-          </p>
-        </>
-      )
-
-    default:
-      return null
-  }
+function Section({ section }: { section: VisualSection }) {
+  return (
+    <section className="mb-[1.2em]">
+      <h5 className="mb-[0.35em] border-b border-[#2b2b2b] pb-[0.2em] text-[0.95em] font-bold tracking-[0.12em] uppercase">
+        {section.heading}
+      </h5>
+      {section.entries.map((entry, index) => (
+        <Entry key={index} entry={entry} />
+      ))}
+    </section>
+  )
 }
 
 export function ResumePaper({
   data,
   className,
+  compact = false,
 }: {
   data: TailoredResumeData
   className?: string
+  compact?: boolean
 }) {
+  const doc = buildResumeVisual(data, { compact })
+
   return (
     <article
       data-slot="resume-paper"
-      className={cn('rounded-md border px-7 py-6', className)}
-    >
-      {data.sectionVisibility.contact !== false ? (
-        <header className="space-y-1 pb-4">
-          <h4 className="text-lg font-bold tracking-[-0.02em]">
-            {data.contact.fullName}
-          </h4>
-          <p className="text-muted-foreground text-[11px]">
-            {[
-              data.contact.email,
-              data.contact.phone,
-              data.contact.location,
-              data.contact.linkedin,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-          <div className="border-t pt-0" />
-        </header>
-      ) : null}
-
-      {data.sectionOrder.map((key) =>
-        key === 'contact' || data.sectionVisibility[key] === false ? null : (
-          <Section key={key} sectionKey={key} data={data} />
-        ),
+      style={{ containerType: 'inline-size' }}
+      className={cn(
+        'overflow-hidden bg-white font-serif text-[#1a1a1a] shadow-[0_1px_3px_rgba(0,0,0,0.12)] ring-1 ring-black/10',
+        className,
       )}
+    >
+      <div
+        className="aspect-[210/297] w-full p-[8%]"
+        style={{ fontSize: 'clamp(5.5px, 1.75cqw, 13px)' }}
+      >
+        <header className="mb-[1.2em]">
+          <p className="text-[1.75em] leading-none font-bold tracking-[0.01em]">
+            {doc.name}
+            {doc.headline ? (
+              <span className="ml-[0.6em] text-[0.62em] font-normal text-[#4a4a4a]">
+                {doc.headline}
+              </span>
+            ) : null}
+          </p>
+          {doc.contact ? (
+            <p className="mt-[0.4em] text-[0.85em] text-[#4a4a4a]">
+              {doc.contact}
+            </p>
+          ) : null}
+        </header>
+
+        <div className="flex gap-[6%]">
+          <div className="flex-[1.15]">
+            {doc.left.map((section) => (
+              <Section key={section.key} section={section} />
+            ))}
+          </div>
+          <div className="flex-1">
+            {doc.right.map((section) => (
+              <Section key={section.key} section={section} />
+            ))}
+          </div>
+        </div>
+      </div>
     </article>
   )
 }

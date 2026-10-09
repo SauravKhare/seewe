@@ -3,16 +3,22 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Check, Download, FileText, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Download,
+  FileText,
+  X,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
-import { AtsParsePanel } from '@/components/app/ats-parse-panel'
 import { Combobox } from '@/components/app/combobox'
 import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
+import { ResumePreviewCard } from '@/components/app/resume-preview-card'
 import { SectionLabel } from '@/components/app/section-label'
 import { SelectField } from '@/components/app/select-field'
-import { SegmentedControl } from '@/components/app/segmented-control'
 import { TailoringEditor } from '@/components/editor/tailoring-editor'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,15 +40,15 @@ import { cn } from '@/lib/utils'
 
 const STEPS = ['Details', 'Job description', 'Tailor', 'Download'] as const
 
-const WORK_MODE_OPTIONS = (
-  Object.keys(WORK_MODE_LABELS) as WorkMode[]
-).map((value) => ({ value, label: WORK_MODE_LABELS[value] }))
+const WORK_MODE_OPTIONS = (Object.keys(WORK_MODE_LABELS) as WorkMode[]).map(
+  (value) => ({ value, label: WORK_MODE_LABELS[value] }),
+)
 const EMPLOYMENT_OPTIONS = (
   Object.keys(EMPLOYMENT_TYPE_LABELS) as EmploymentType[]
 ).map((value) => ({ value, label: EMPLOYMENT_TYPE_LABELS[value] }))
-const PERIOD_OPTIONS = (Object.keys(SALARY_PERIOD_LABELS) as SalaryPeriod[]).map(
-  (value) => ({ value, label: SALARY_PERIOD_LABELS[value] }),
-)
+const PERIOD_OPTIONS = (
+  Object.keys(SALARY_PERIOD_LABELS) as SalaryPeriod[]
+).map((value) => ({ value, label: SALARY_PERIOD_LABELS[value] }))
 
 interface SkillRow {
   name: string
@@ -63,8 +69,8 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
   const [step, setStep] = useState(0)
   const [companyName, setCompanyName] = useState(
     () =>
-      companies.find((company) => company.id === existingJob?.companyId)?.name ??
-      '',
+      companies.find((company) => company.id === existingJob?.companyId)
+        ?.name ?? '',
   )
   const [position, setPosition] = useState(existingJob?.position ?? '')
   const [jobUrl, setJobUrl] = useState(existingJob?.jobUrl ?? '')
@@ -113,7 +119,7 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
 
   const [data, setData] = useState<TailoredResumeData | null>(null)
   const [dirty, setDirty] = useState(false)
-  const [mode, setMode] = useState<'visual' | 'ats'>('visual')
+
   const [fileName, setFileName] = useState(() => {
     const prior = existingJob
       ? tailored
@@ -130,7 +136,11 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
   const [generating, setGenerating] = useState(false)
 
   const companyOptions = useMemo(
-    () => companies.map((company) => ({ value: company.name, label: company.name })),
+    () =>
+      companies.map((company) => ({
+        value: company.name,
+        label: company.name,
+      })),
     [companies],
   )
 
@@ -162,7 +172,11 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
           .filter((row) => row.jobApplicationId === existingJob.id)
           .sort((a, b) => b.version - a.version)[0]
       : undefined
-    setData(latest ? structuredClone(latest.data) : tailoredFromMaster(master, catalog))
+    setData(
+      latest
+        ? structuredClone(latest.data)
+        : tailoredFromMaster(master, catalog),
+    )
   }
 
   function goNext() {
@@ -175,10 +189,12 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
     setStep((current) => Math.max(0, current - 1))
   }
 
-  const detailsValid = companyName.trim().length > 0 && position.trim().length > 0
+  const detailsValid =
+    companyName.trim().length > 0 && position.trim().length > 0
 
   function addSkill(name: string) {
-    if (skills.some((row) => row.name.toLowerCase() === name.toLowerCase())) return
+    if (skills.some((row) => row.name.toLowerCase() === name.toLowerCase()))
+      return
     setSkills((current) => [...current, { name, required: true }])
   }
 
@@ -275,13 +291,11 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
     const targetId = upsertJob()
     if (!targetId) return
     if (dirty && data) {
-      useAppStore
-        .getState()
-        .saveTailored({
-          jobApplicationId: targetId,
-          data,
-          fileName: fileName.trim(),
-        })
+      useAppStore.getState().saveTailored({
+        jobApplicationId: targetId,
+        data,
+        fileName: fileName.trim(),
+      })
       setDirty(false)
     }
     toast('Draft saved. Not marked as applied.')
@@ -292,9 +306,13 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <SectionLabel>{existingJob ? 'Edit application' : 'New application'}</SectionLabel>
+          <SectionLabel>
+            {existingJob ? 'Edit application' : 'New application'}
+          </SectionLabel>
           <h1 className="text-2xl font-semibold tracking-[-0.02em]">
-            {existingJob ? 'Update and tailor' : 'Track a job and tailor a resume'}
+            {existingJob
+              ? 'Update and tailor'
+              : 'Track a job and tailor a resume'}
           </h1>
         </div>
         <Link
@@ -314,7 +332,8 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
               <span
                 className={cn(
                   'flex size-6 items-center justify-center rounded-full border text-xs',
-                  done && 'bg-primary text-primary-foreground border-transparent',
+                  done &&
+                    'bg-primary text-primary-foreground border-transparent',
                   active && 'border-focus text-focus',
                   !done && !active && 'text-muted-foreground',
                 )}
@@ -374,9 +393,7 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
             <Field label="Employment type">
               <SelectField
                 value={employmentType}
-                onChange={(value) =>
-                  setEmploymentType(value as EmploymentType)
-                }
+                onChange={(value) => setEmploymentType(value as EmploymentType)}
                 options={EMPLOYMENT_OPTIONS}
                 placeholder="Select"
               />
@@ -470,7 +487,10 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
 
         {step === 1 ? (
           <div className="space-y-5">
-            <Field label="Job description" hint="Paste the posting exactly as written.">
+            <Field
+              label="Job description"
+              hint="Paste the posting exactly as written."
+            >
               <Textarea
                 rows={12}
                 value={jobDescription}
@@ -544,15 +564,6 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
               <p className="text-muted-foreground text-xs">
                 Edit a copy of your master. Your master never changes.
               </p>
-              <SegmentedControl
-                options={[
-                  { label: 'Visual', value: 'visual' as const },
-                  { label: 'ATS text', value: 'ats' as const },
-                ]}
-                value={mode}
-                onChange={setMode}
-                ariaLabel="Editor pane mode"
-              />
             </div>
             {data ? (
               <TailoringEditor
@@ -560,7 +571,6 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
                 onChange={handleDataChange}
                 jd={jobDescription}
                 jobSkills={skills}
-                mode={mode}
               />
             ) : null}
           </div>
@@ -584,7 +594,9 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
                 {generating ? 'Generating…' : 'Download and mark applied'}
               </Button>
             </div>
-            {data ? <AtsParsePanel data={data} label="Resume preview" /> : null}
+            {data ? (
+              <ResumePreviewCard data={data} label="Resume preview" />
+            ) : null}
           </div>
         ) : null}
       </div>

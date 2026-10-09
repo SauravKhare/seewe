@@ -6,6 +6,7 @@ import { Menu, Plus } from 'lucide-react'
 
 import { CommandPalette } from '@/components/app/command-palette'
 import { Sidebar } from '@/components/app/sidebar'
+import { ThemeToggle } from '@/components/app/theme-toggle'
 import { UserMenu } from '@/components/app/user-menu'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,6 +38,7 @@ export function Topbar() {
       <CommandPalette />
 
       <div className="ml-auto flex items-center gap-3">
+        <ThemeToggle />
         <Button size="sm" onClick={() => router.push('/jobs/new')}>
           <Plus className="size-3.5" />
           New job / resume

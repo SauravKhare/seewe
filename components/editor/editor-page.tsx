@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronDown, Download, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { SegmentedControl } from '@/components/app/segmented-control'
 import { EmptyState } from '@/components/app/empty-state'
 import { TailoringEditor } from '@/components/editor/tailoring-editor'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -56,7 +55,6 @@ export function EditorPage({ jobId }: { jobId?: string }) {
   )
   const [version, setVersion] = useState(latest?.version ?? 0)
   const [dirty, setDirty] = useState(false)
-  const [mode, setMode] = useState<'visual' | 'ats'>('visual')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -245,15 +243,6 @@ export function EditorPage({ jobId }: { jobId?: string }) {
         </span>
 
         <div className="ml-auto flex items-center gap-2">
-          <SegmentedControl
-            options={[
-              { label: 'Visual', value: 'visual' as const },
-              { label: 'ATS text', value: 'ats' as const },
-            ]}
-            value={mode}
-            onChange={setMode}
-            ariaLabel="Editor pane mode"
-          />
           <Button
             type="button"
             variant="outline"
@@ -280,7 +269,6 @@ export function EditorPage({ jobId }: { jobId?: string }) {
         onChange={update}
         jd={job?.jobDescription}
         jobSkills={editorSkills}
-        mode={mode}
       />
 
       <div className="bg-background/95 sticky bottom-0 z-20 -mx-4 flex items-center gap-2 border-t px-4 py-2.5 backdrop-blur lg:hidden">

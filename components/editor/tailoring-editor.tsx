@@ -7,6 +7,7 @@ import { BulletListEditor } from '@/components/app/bullet-list-editor'
 import { Combobox } from '@/components/app/combobox'
 import { Field } from '@/components/app/field'
 import { GapPanel } from '@/components/editor/gap-panel'
+import { ResumePaper } from '@/components/app/resume-paper'
 import { SectionLabel } from '@/components/app/section-label'
 import { SegmentedControl } from '@/components/app/segmented-control'
 import { SelectField } from '@/components/app/select-field'
@@ -17,7 +18,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { SKILL_LEVEL_LABELS } from '@/lib/constants'
 import { useAppStore } from '@/lib/data/store'
 import { normalizeName } from '@/lib/id'
-import { renderAtsText } from '@/lib/resume'
 import {
   computeGaps,
   emptyRemoved,
@@ -247,14 +247,12 @@ export function TailoringEditor({
   onChange,
   jd,
   jobSkills,
-  mode,
   className,
 }: {
   data: TailoredResumeData
   onChange: (data: TailoredResumeData) => void
   jd?: string
   jobSkills: EditorJobSkill[]
-  mode: 'visual' | 'ats'
   className?: string
 }) {
   const master = useAppStore((state) => state.master)
@@ -819,18 +817,18 @@ export function TailoringEditor({
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
-      <SegmentedControl
-        options={PANE_OPTIONS}
-        value={pane}
-        onChange={setPane}
-        ariaLabel="Editor pane"
-        className="w-full lg:hidden"
-      />
-      <div className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)_18rem]">
+    <div className={cn('grid gap-4 lg:grid-cols-[3fr_2fr]', className)}>
+      <div className="min-w-0 space-y-4">
+        <SegmentedControl
+          options={PANE_OPTIONS}
+          value={pane}
+          onChange={setPane}
+          ariaLabel="Editor pane"
+          className="w-full lg:hidden"
+        />
         <aside
           className={cn(
-            'bg-card h-fit rounded-md border p-3 lg:sticky lg:top-20',
+            'bg-card h-fit rounded-md border p-3',
             pane === 'sections' ? 'block' : 'hidden',
             'lg:block',
           )}
@@ -874,75 +872,65 @@ export function TailoringEditor({
 
         <div
           className={cn(
-            'min-w-0',
+            'min-w-0 space-y-4',
             pane === 'resume' ? 'block' : 'hidden',
             'lg:block',
           )}
         >
-          {mode === 'ats' ? (
-            <pre className="min-h-[28rem] overflow-auto rounded-md bg-neutral-900 p-5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-lime-100">
-              {renderAtsText(data)}
-            </pre>
-          ) : (
-            <div className="space-y-4">
-              <Field label="Headline">
-                <Input
-                  value={data.headline}
-                  onChange={(event) =>
-                    setData({ headline: event.target.value })
-                  }
-                />
-              </Field>
-              {data.sectionOrder.map((key) => {
-                if (data.sectionVisibility[key] === false) return null
-                return (
-                  <div key={key} className="bg-card rounded-md border p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <SectionLabel>{SECTION_TITLES[key]}</SectionLabel>
-                    </div>
-                    {renderEditable(key)}
-                  </div>
-                )
-              })}
-              {removedRows.length > 0 ? (
-                <div className="border-destructive/30 bg-destructive/5 rounded-md border p-4">
-                  <div className="flex items-center justify-between">
-                    <SectionLabel>Removed</SectionLabel>
-                    <span className="text-destructive text-xs">
-                      {removedRows.length}{' '}
-                      {removedRows.length === 1 ? 'item' : 'items'}
-                    </span>
-                  </div>
-                  <ul className="mt-3 space-y-1.5">
-                    {removedRows.map((row, index) => (
-                      <li
-                        key={`${row.section}-${index}`}
-                        className="border-destructive/30 bg-background flex items-center gap-2 rounded-md border px-2 py-1.5"
-                      >
-                        <span className="text-destructive min-w-0 flex-1 truncate text-xs">
-                          {rowLabel(row)}
-                        </span>
-                        <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-                          {SECTION_TITLES[row.section]}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => onChange(restoreRow(data, row))}
-                        >
-                          <RotateCcw className="size-3" /> Restore
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
+          <Field label="Headline">
+            <Input
+              value={data.headline}
+              onChange={(event) => setData({ headline: event.target.value })}
+            />
+          </Field>
+          {data.sectionOrder.map((key) => {
+            if (data.sectionVisibility[key] === false) return null
+            return (
+              <div key={key} className="bg-card rounded-md border p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <SectionLabel>{SECTION_TITLES[key]}</SectionLabel>
                 </div>
-              ) : null}
+                {renderEditable(key)}
+              </div>
+            )
+          })}
+          {removedRows.length > 0 ? (
+            <div className="border-destructive/30 bg-destructive/5 rounded-md border p-4">
+              <div className="flex items-center justify-between">
+                <SectionLabel>Removed</SectionLabel>
+                <span className="text-destructive text-xs">
+                  {removedRows.length}{' '}
+                  {removedRows.length === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+              <ul className="mt-3 space-y-1.5">
+                {removedRows.map((row, index) => (
+                  <li
+                    key={`${row.section}-${index}`}
+                    className="border-destructive/30 bg-background flex items-center gap-2 rounded-md border px-2 py-1.5"
+                  >
+                    <span className="text-destructive min-w-0 flex-1 truncate text-xs">
+                      {rowLabel(row)}
+                    </span>
+                    <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                      {SECTION_TITLES[row.section]}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => onChange(restoreRow(data, row))}
+                    >
+                      <RotateCcw className="size-3" /> Restore
+                    </Button>
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
+          ) : null}
         </div>
 
-        <aside
+        <div
           className={cn(
             'space-y-4',
             pane === 'job' ? 'block' : 'hidden',
@@ -974,8 +962,20 @@ export function TailoringEditor({
               onInsert={addSkill}
             />
           </div>
-        </aside>
+        </div>
       </div>
+
+      <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <SectionLabel>Live preview</SectionLabel>
+            <span className="text-muted-foreground text-[11px]">
+              Updates as you edit
+            </span>
+          </div>
+          <ResumePaper data={data} />
+        </div>
+      </aside>
     </div>
   )
 }

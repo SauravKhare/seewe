@@ -1,5 +1,6 @@
 import {
   Document,
+  Font,
   Page,
   StyleSheet,
   Text,
@@ -7,69 +8,174 @@ import {
   pdf,
 } from '@react-pdf/renderer'
 
-import { buildResumeDocument } from '@/lib/resume'
+import {
+  buildResumeVisual,
+  type VisualEntry,
+  type VisualSection,
+} from '@/lib/resume'
 import type { TailoredResumeData } from '@/lib/types'
+
+Font.register({
+  family: 'EB Garamond',
+  fonts: [
+    { src: '/fonts/eb-garamond-regular.ttf', fontWeight: 400 },
+    { src: '/fonts/eb-garamond-medium.ttf', fontWeight: 500 },
+    { src: '/fonts/eb-garamond-semibold.ttf', fontWeight: 600 },
+    { src: '/fonts/eb-garamond-bold.ttf', fontWeight: 700 },
+    {
+      src: '/fonts/eb-garamond-italic.ttf',
+      fontWeight: 400,
+      fontStyle: 'italic',
+    },
+  ],
+})
+
+const INK = '#1a1a1a'
+const MUTED = '#4a4a4a'
+const RULE = '#2b2b2b'
 
 const styles = StyleSheet.create({
   page: {
-    paddingVertical: 46,
-    paddingHorizontal: 52,
-    fontFamily: 'Helvetica',
+    paddingVertical: 34,
+    paddingHorizontal: 40,
+    fontFamily: 'EB Garamond',
     fontSize: 10,
-    color: '#171717',
+    color: INK,
+  },
+  header: {
+    marginBottom: 12,
+  },
+  name: {
+    fontFamily: 'EB Garamond',
+    fontWeight: 700,
+    fontSize: 19,
+    letterSpacing: 0.2,
+  },
+  headline: {
+    fontFamily: 'EB Garamond',
+    fontWeight: 400,
+    fontSize: 12,
+    color: MUTED,
   },
   contact: {
-    marginBottom: 3,
-  },
-  contactName: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 16,
-    letterSpacing: 1.4,
-    textAlign: 'center',
-  },
-  contactLine: {
+    marginTop: 4,
     fontSize: 9,
-    letterSpacing: 0.2,
-    textAlign: 'center',
-    color: '#404040',
-    marginTop: 3,
-    marginBottom: 4,
+    color: MUTED,
+  },
+  columns: {
+    flexDirection: 'row',
+    columnGap: 22,
+    marginTop: 2,
+  },
+  colLeft: {
+    flexGrow: 1.15,
+    flexBasis: 0,
+  },
+  colRight: {
+    flexGrow: 1,
+    flexBasis: 0,
   },
   section: {
-    marginTop: 11,
+    marginBottom: 12,
   },
   heading: {
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'EB Garamond',
+    fontWeight: 700,
     fontSize: 10.5,
-    letterSpacing: 1.2,
-    marginBottom: 4,
-    color: '#0a0a0a',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    marginBottom: 3,
   },
-  entry: {
+  rule: {
+    borderBottomWidth: 0.8,
+    borderBottomColor: RULE,
     marginBottom: 5,
   },
+  entry: {
+    marginBottom: 6,
+  },
+  entryHead: {
+    fontWeight: 700,
+    fontSize: 10,
+  },
+  entryMeta: {
+    fontSize: 8.5,
+    color: MUTED,
+    marginTop: 1,
+  },
+  body: {
+    fontSize: 9.5,
+    lineHeight: 1.35,
+    marginTop: 1,
+  },
   line: {
-    lineHeight: 1.3,
+    fontSize: 9.5,
+    lineHeight: 1.35,
   },
   bulletRow: {
     flexDirection: 'row',
+    marginTop: 1.5,
   },
   bulletMarker: {
-    width: 10,
+    width: 9,
+    fontSize: 9.5,
   },
   bulletText: {
     flex: 1,
-    lineHeight: 1.3,
-  },
-  divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    marginBottom: 6,
-    marginTop: 1,
+    fontSize: 9.5,
+    lineHeight: 1.35,
   },
 })
 
-/** ATS-safe, single-column resume document shared by preview and download. */
+function Entry({ entry }: { entry: VisualEntry }) {
+  return (
+    <View style={styles.entry} wrap>
+      {entry.head ? (
+        <Text style={styles.entryHead}>
+          {entry.head}
+          {!entry.meta && entry.lines?.length ? ': ' : ''}
+          {!entry.meta && entry.lines?.length ? entry.lines[0] : ''}
+        </Text>
+      ) : null}
+      {entry.meta ? <Text style={styles.entryMeta}>{entry.meta}</Text> : null}
+      {entry.head && entry.lines?.length
+        ? entry.lines.slice(entry.meta ? 0 : 1).map((line, index) => (
+            <Text key={index} style={styles.line}>
+              {line}
+            </Text>
+          ))
+        : null}
+      {!entry.head && entry.lines
+        ? entry.lines.map((line, index) => (
+            <Text key={index} style={styles.line}>
+              {line}
+            </Text>
+          ))
+        : null}
+      {entry.body ? <Text style={styles.body}>{entry.body}</Text> : null}
+      {entry.bullets?.map((bullet, index) => (
+        <View key={index} style={styles.bulletRow} wrap>
+          <Text style={styles.bulletMarker}>•</Text>
+          <Text style={styles.bulletText}>{bullet}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
+function Section({ section }: { section: VisualSection }) {
+  return (
+    <View style={styles.section} wrap>
+      <Text style={styles.heading}>{section.heading}</Text>
+      <View style={styles.rule} />
+      {section.entries.map((entry, index) => (
+        <Entry key={index} entry={entry} />
+      ))}
+    </View>
+  )
+}
+
+/** Two-column EB Garamond resume document shared by preview and download. */
 export function AtsDocument({
   data,
   fileName,
@@ -77,51 +183,40 @@ export function AtsDocument({
   data: TailoredResumeData
   fileName?: string
 }) {
-  const doc = buildResumeDocument(data)
+  const doc = buildResumeVisual(data)
 
   return (
     <Document
       title={fileName?.replace(/\.pdf$/i, '')}
-      author={doc.contact?.fullName}
+      author={doc.name || undefined}
       subject="Tailored resume"
       creator="seewe"
     >
-      <Page size="LETTER" style={styles.page}>
-        <View wrap>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text>
+            {doc.name ? <Text style={styles.name}>{doc.name}</Text> : null}
+            {doc.name && doc.headline ? '   ' : ''}
+            {doc.headline ? (
+              <Text style={styles.headline}>{doc.headline}</Text>
+            ) : null}
+          </Text>
           {doc.contact ? (
-            <View style={styles.contact} wrap>
-              {doc.contact.fullName ? (
-                <Text style={styles.contactName}>
-                  {doc.contact.fullName.toUpperCase()}
-                </Text>
-              ) : null}
-              {doc.contact.line ? (
-                <Text style={styles.contactLine}>{doc.contact.line}</Text>
-              ) : null}
-              <Text style={styles.divider} />
-            </View>
+            <Text style={styles.contact}>{doc.contact}</Text>
           ) : null}
+        </View>
 
-          {doc.sections.map((section) => (
-            <View key={section.heading} wrap style={styles.section}>
-              <Text style={styles.heading}>{section.heading}</Text>
-              {section.entries.map((entry, index) => (
-                <View key={index} wrap style={styles.entry}>
-                  {entry.lines.map((line, lineIndex) => (
-                    <Text key={lineIndex} style={styles.line}>
-                      {line}
-                    </Text>
-                  ))}
-                  {entry.bullets.map((bullet, bulletIndex) => (
-                    <View key={bulletIndex} wrap style={styles.bulletRow}>
-                      <Text style={styles.bulletMarker}>•</Text>
-                      <Text style={styles.bulletText}>{bullet}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </View>
-          ))}
+        <View style={styles.columns}>
+          <View style={styles.colLeft}>
+            {doc.left.map((section) => (
+              <Section key={section.key} section={section} />
+            ))}
+          </View>
+          <View style={styles.colRight}>
+            {doc.right.map((section) => (
+              <Section key={section.key} section={section} />
+            ))}
+          </View>
         </View>
       </Page>
     </Document>

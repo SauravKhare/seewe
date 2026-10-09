@@ -13,6 +13,7 @@ import {
 import { SectionLabel } from '@/components/app/section-label'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DEMO_USER } from '@/lib/data/fixtures'
+import { useAppStore } from '@/lib/data/store'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -30,6 +31,7 @@ export function Sidebar({
   className?: string
 }) {
   const pathname = usePathname()
+  const jobCount = useAppStore((state) => state.jobs.length)
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`)
@@ -60,7 +62,12 @@ export function Sidebar({
             )}
           >
             <item.icon className="size-4" />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.href === '/jobs' && jobCount > 0 ? (
+              <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-[10px] font-medium">
+                {jobCount}
+              </span>
+            ) : null}
           </Link>
         )
       })}
