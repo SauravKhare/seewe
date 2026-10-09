@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ceewe — tailor your resume before the machine reads it',
+  title: 'seewe — tailor your resume before the machine reads it',
   description:
     'Paste a job description, edit a copy of your master resume to match it, and download a PDF any ATS can read. Your master never changes.',
 }

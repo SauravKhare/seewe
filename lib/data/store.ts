@@ -492,7 +492,7 @@ export const useAppStore = create<AppState>()(
       },
     }),
     {
-      name: 'ceewe-store',
+      name: 'seewe-store',
       version: 1,
       skipHydration: true,
     },

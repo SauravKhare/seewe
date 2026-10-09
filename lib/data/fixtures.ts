@@ -29,7 +29,7 @@ export const MASTER_RESUME_ID = 'resume_master'
 export const DEMO_USER = {
   id: USER_ID,
   name: 'Jane Doe',
-  email: 'demo@ceewe.app',
+  email: 'demo@seewe.app',
   password: 'demo1234',
   initials: 'JD',
 }

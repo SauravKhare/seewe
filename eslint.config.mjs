@@ -6,7 +6,7 @@ const config = [
     ignores: [
       '.next/**',
       'node_modules/**',
-      'ceewe-ui-demo/**',
+      'seewe-ui-demo/**',
       'next-env.d.ts',
     ],
   },

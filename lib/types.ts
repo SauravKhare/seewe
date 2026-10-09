@@ -1,5 +1,5 @@
 /**
- * Domain types for ceewe.
+ * Domain types for seewe.
  *
  * These mirror the Postgres schema in docs/DATABASE.md. They are used by the
  * static (Phase 1) local repository and will be shared with the Drizzle schema
