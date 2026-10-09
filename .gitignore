@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+
+# env
+.env
+.env*.local
+
+# misc
+.DS_Store
+*.pem
+.vercel
+*.tsbuildinfo
+
+# logs
+npm-debug.log*
+pnpm-debug.log*
+
+# reference mockup (kept for visual reference until Phase 1 port is verified)
+# ceewe-ui-demo/
