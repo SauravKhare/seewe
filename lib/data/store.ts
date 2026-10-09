@@ -19,6 +19,7 @@ import type {
   JobSkill,
   Language,
   MasterResumeData,
+  MasterSection,
   Project,
   ResumeSkill,
   SalaryPeriod,
@@ -111,6 +112,7 @@ interface AppState {
   upsertResumeSkill: (item: ResumeSkill) => void
   removeResumeSkill: (id: string) => void
   ensureSkill: (name: string) => Skill
+  reorderMasterSection: (section: MasterSection, orderedIds: string[]) => void
 
   createCompany: (name: string) => Company
   createJob: (input: CreateJobInput) => JobApplication
@@ -269,6 +271,29 @@ export const useAppStore = create<AppState>()(
             skills: state.master.skills.filter((item) => item.id !== id),
           },
         })),
+
+      reorderMasterSection: (section, orderedIds) =>
+        set((state) => {
+          const list = state.master[section] as unknown as {
+            id: string
+            sortOrder: number
+          }[]
+          const byId = new Map(list.map((item) => [item.id, item]))
+          const next = orderedIds
+            .map((id, index) => {
+              const item = byId.get(id)
+              return item ? { ...item, sortOrder: index } : null
+            })
+            .filter((item): item is { id: string; sortOrder: number } =>
+              Boolean(item),
+            )
+          return {
+            master: {
+              ...state.master,
+              [section]: next as unknown as MasterResumeData[typeof section],
+            },
+          }
+        }),
 
       ensureSkill: (name) => {
         const normalized = normalizeName(name)

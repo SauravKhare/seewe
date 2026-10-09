@@ -10,6 +10,7 @@ import type {
   JobApplication,
   JobSkill,
   MasterResumeData,
+  MasterSection,
   Skill,
   TailoredResume,
 } from '@/lib/types'
@@ -38,6 +39,7 @@ export interface JobDetail {
 export interface Repository {
   getMasterResume(): Promise<MasterResumeData>
   getSkills(): Promise<Skill[]>
+  reorderMasterSection(section: MasterSection, orderedIds: string[]): void
   listCompanies(): Promise<Company[]>
   listJobs(): Promise<JobApplication[]>
   getJob(id: string): Promise<JobApplication | undefined>
@@ -98,6 +100,9 @@ export const localRepository: Repository = {
   },
   async getSkills() {
     return useAppStore.getState().skills
+  },
+  reorderMasterSection(section, orderedIds) {
+    useAppStore.getState().reorderMasterSection(section, orderedIds)
   },
   async listCompanies() {
     return useAppStore.getState().companies

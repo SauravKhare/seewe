@@ -288,6 +288,15 @@ export interface TailoredResume {
   updatedAt: string
 }
 
+/** Master-resume collections that can be reordered by the builder. */
+export type MasterSection =
+  | 'experience'
+  | 'education'
+  | 'skills'
+  | 'projects'
+  | 'certifications'
+  | 'languages'
+
 /** The master resume plus all its child rows, hydrated for the UI. */
 export interface MasterResumeData {
   resume: Resume
