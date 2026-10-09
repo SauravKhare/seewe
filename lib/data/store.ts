@@ -115,6 +115,7 @@ interface AppState {
   reorderMasterSection: (section: MasterSection, orderedIds: string[]) => void
 
   createCompany: (name: string) => Company
+  updateCompany: (id: string, patch: Partial<Company>) => void
   createJob: (input: CreateJobInput) => JobApplication
   updateJob: (id: string, patch: Partial<JobApplication>) => void
   deleteJob: (id: string) => void
@@ -328,6 +329,22 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ companies: [...state.companies, company] }))
         return company
       },
+
+      updateCompany: (id, patch) =>
+        set((state) => ({
+          companies: state.companies.map((company) =>
+            company.id === id
+              ? {
+                  ...company,
+                  ...patch,
+                  normalizedName: patch.name
+                    ? normalizeName(patch.name)
+                    : company.normalizedName,
+                  updatedAt: new Date().toISOString(),
+                }
+              : company,
+          ),
+        })),
 
       createJob: (input) => {
         const company = get().createCompany(input.companyName)
