@@ -1,5 +1,5 @@
 import { SALARY_PERIOD_LABELS } from '@/lib/constants'
-import type { SalaryPeriod } from '@/lib/types'
+import type { ApplicationStatus, SalaryPeriod } from '@/lib/types'
 
 const MONTH_FORMAT = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -42,6 +42,21 @@ export function formatDateTime(value?: string): string {
   return DATETIME_FORMAT.format(date)
 }
 
+/** Human relative time for autosave indicators. */
+export function formatRelativeTime(
+  timestamp?: number,
+  now = Date.now(),
+): string {
+  if (!timestamp) return ''
+  const seconds = Math.max(0, Math.round((now - timestamp) / 1000))
+  if (seconds < 45) return 'just now'
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.round(hours / 24)}d ago`
+}
+
 export function formatDateRange(
   start?: string,
   end?: string,
@@ -71,4 +86,42 @@ export function formatSalary(
       ? `${formatter.format(min)} – ${formatter.format(max)}`
       : formatter.format((min ?? max) as number)
   return period ? `${range} ${SALARY_PERIOD_LABELS[period]}` : range
+}
+
+const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i
+const BLOCKED_SCHEME = /^(javascript|data|vbscript|file):/i
+
+/**
+ * Normalises a user-entered job URL: adds `https://` only when no scheme is
+ * present, and rejects non-http(s) schemes. Returns undefined for empty input.
+ */
+export function normalizeJobUrl(value?: string): string | undefined {
+  const raw = value?.trim()
+  if (!raw) return undefined
+  if (BLOCKED_SCHEME.test(raw)) return undefined
+  if (HAS_SCHEME.test(raw)) return raw
+  return `https://${raw}`
+}
+
+/** Returns a normalized URL only if it resolves to http/https. */
+export function safeJobHref(value?: string): string | undefined {
+  const url = normalizeJobUrl(value)
+  if (!url) return undefined
+  try {
+    const { protocol } = new URL(url)
+    return protocol === 'http:' || protocol === 'https:' ? url : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * A `saved` application has not been submitted yet, so its stored date is a
+ * default rather than a real application date. Never present it as one.
+ */
+export function effectiveAppliedDate(job: {
+  status: ApplicationStatus
+  appliedDate?: string
+}): string | undefined {
+  return job.status === 'saved' ? undefined : job.appliedDate
 }

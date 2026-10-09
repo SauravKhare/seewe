@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Menu, Plus, Search } from 'lucide-react'
+import { Menu, Plus } from 'lucide-react'
 
+import { CommandPalette } from '@/components/app/command-palette'
 import { Sidebar } from '@/components/app/sidebar'
 import { UserMenu } from '@/components/app/user-menu'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,7 @@ export function Topbar() {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetTrigger
           aria-label="Open navigation"
-          className="inline-flex size-8 items-center justify-center rounded-md hover:bg-muted lg:hidden"
+          className="hover:bg-muted inline-flex size-8 items-center justify-center rounded-md lg:hidden"
         >
           <Menu className="size-4" />
         </SheetTrigger>
@@ -33,14 +34,7 @@ export function Topbar() {
         </SheetContent>
       </Sheet>
 
-      <div className="text-muted-foreground hidden items-center gap-2 md:flex">
-        <Search className="size-4" />
-        <input
-          type="search"
-          placeholder="Search jobs, companies..."
-          className="placeholder:text-muted-foreground w-56 bg-transparent py-2 text-sm outline-none"
-        />
-      </div>
+      <CommandPalette />
 
       <div className="ml-auto flex items-center gap-3">
         <Button size="sm" onClick={() => router.push('/jobs/new')}>

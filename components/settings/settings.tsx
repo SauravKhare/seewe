@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Code2, Download, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Field } from '@/components/app/field'
@@ -21,8 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { clearAuthCookie } from '@/lib/auth/fake-auth'
+import { clearAccount, clearAuthCookie } from '@/lib/auth/fake-auth'
 import { useAppStore } from '@/lib/data/store'
 import { DEMO_USER } from '@/lib/data/fixtures'
 
@@ -30,12 +28,11 @@ export function Settings() {
   const router = useRouter()
   const [name, setName] = useState(DEMO_USER.name)
   const [email, setEmail] = useState(DEMO_USER.email)
-  const [google, setGoogle] = useState(true)
-  const [github, setGithub] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   function deleteAccount() {
     clearAuthCookie()
+    clearAccount()
     useAppStore.getState().resetDemo()
     toast('Account deleted. Signed out.')
     router.push('/')
@@ -46,7 +43,7 @@ export function Settings() {
       <PageHeading
         eyebrow="Workspace"
         title="Settings"
-        description="Profile, connections, and data."
+        description="Profile, template, and data."
       />
 
       <Panel className="p-5">
@@ -72,44 +69,12 @@ export function Settings() {
           </div>
         </div>
         <div className="mt-4 flex justify-end">
-          <Button type="button" size="sm" onClick={() => toast('Profile saved.')}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => toast('Profile saved.')}
+          >
             Save profile
-          </Button>
-        </div>
-      </Panel>
-
-      <Panel className="p-5">
-        <PanelHeader
-          title="Connected accounts"
-          description="Social sign-in arrives in Phase 2."
-        />
-        <div className="mt-4 divide-y">
-          <div className="flex items-center gap-3 py-3 first:pt-0">
-            <GoogleMark />
-            <span className="flex-1 text-sm">Google</span>
-            <Switch
-              checked={google}
-              onCheckedChange={setGoogle}
-              aria-label="Connect Google"
-            />
-          </div>
-          <div className="flex items-center gap-3 py-3 last:pb-0">
-            <Code2 className="size-4" />
-            <span className="flex-1 text-sm">GitHub</span>
-            <Switch
-              checked={github}
-              onCheckedChange={setGithub}
-              aria-label="Connect GitHub"
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex items-center gap-3 border-t pt-4">
-          <Link2 className="text-muted-foreground size-4" />
-          <span className="text-muted-foreground flex-1 text-sm">
-            LinkedIn import — coming soon
-          </span>
-          <Button type="button" variant="outline" size="sm" disabled>
-            Connect
           </Button>
         </div>
       </Panel>
@@ -136,51 +101,45 @@ export function Settings() {
         </p>
       </Panel>
 
-      <Panel className="p-5">
-        <PanelHeader
-          title="Demo data"
-          description="Preview empty states or restore the seed dataset."
-        />
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              useAppStore.getState().clearDemo()
-              toast('Empty states enabled.')
-            }}
-          >
-            Preview empty states
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              useAppStore.getState().resetDemo()
-              toast('Demo data restored.')
-            }}
-          >
-            Reset demo data
-          </Button>
-        </div>
-      </Panel>
+      {process.env.NEXT_PUBLIC_ENABLE_DEMO_TOOLS === 'true' ? (
+        <Panel className="p-5">
+          <PanelHeader
+            title="Demo data"
+            description="Preview empty states or restore the seed dataset."
+          />
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                useAppStore.getState().clearDemo()
+                toast('Empty states enabled.')
+              }}
+            >
+              Preview empty states
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                useAppStore.getState().resetDemo()
+                toast('Demo data restored.')
+              }}
+            >
+              Reset demo data
+            </Button>
+          </div>
+        </Panel>
+      ) : null}
 
       <Panel className="p-5">
         <PanelHeader
           title="Privacy and data"
-          description="Your data is isolated per user and stored privately. Downloads use signed links."
+          description="Everything stays in this browser for now. Accounts, cloud storage, and data export arrive with the backend."
         />
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => toast('Export arrives in Phase 2.')}
-          >
-            <Download className="size-3.5" /> Export data
-          </Button>
           <Button
             type="button"
             variant="destructive"
@@ -197,7 +156,8 @@ export function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete your account?</AlertDialogTitle>
             <AlertDialogDescription>
-              This clears the demo data and signs you out. It cannot be undone.
+              This clears your local data and signs you out. It cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -209,13 +169,5 @@ export function Settings() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
-}
-
-function GoogleMark() {
-  return (
-    <span className="flex size-4 items-center justify-center text-xs font-bold">
-      G
-    </span>
   )
 }

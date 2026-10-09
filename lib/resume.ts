@@ -1,50 +1,83 @@
 import { formatDateRange } from '@/lib/format'
 import type { ResumeSectionKey, TailoredResumeData } from '@/lib/types'
 
-function contactText(data: TailoredResumeData): string | null {
-  const c = data.contact
-  const parts = [c.email, c.phone, c.location, c.linkedin, c.github, c.website]
-    .filter(Boolean)
-    .join(' | ')
-  const lines: string[] = []
-  if (c.fullName) lines.push(c.fullName.toUpperCase())
-  if (parts) lines.push(parts)
-  return lines.length ? lines.join('\n') : null
+export interface ResumeEntry {
+  lines: string[]
+  bullets: string[]
 }
 
-function sectionText(
+export interface ResumeSection {
+  heading: string
+  entries: ResumeEntry[]
+  /** How entries are joined in plain-text (ATS) output. */
+  separator: string
+}
+
+export interface ResumeContact {
+  fullName?: string
+  line?: string
+}
+
+/**
+ * Structured representation of a tailored snapshot. Both the ATS plain-text
+ * renderer and the PDF renderer consume this, so the two can never drift.
+ */
+export interface ResumeDocument {
+  contact: ResumeContact | null
+  sections: ResumeSection[]
+}
+
+function buildContact(data: TailoredResumeData): ResumeContact | null {
+  const c = data.contact
+  const line = [c.email, c.phone, c.location, c.linkedin, c.github, c.website]
+    .filter(Boolean)
+    .join(' | ')
+  if (!c.fullName && !line) return null
+  return { fullName: c.fullName, line: line || undefined }
+}
+
+function buildSection(
   key: ResumeSectionKey,
   data: TailoredResumeData,
-): string | null {
+): ResumeSection | null {
   switch (key) {
     case 'summary':
-      return data.summary ? `SUMMARY\n${data.summary}` : null
+      return data.summary
+        ? { heading: 'SUMMARY', separator: '\n\n', entries: [{ lines: [data.summary], bullets: [] }] }
+        : null
 
     case 'experience': {
       if (!data.experience.length) return null
-      const entries = data.experience.map((item) => {
-        const head = [item.title, item.company].filter(Boolean).join(' | ')
-        const range = formatDateRange(item.startDate, item.endDate, item.current)
-        const lines = [head]
-        if (range) lines.push(range)
-        if (item.location) lines.push(item.location)
-        lines.push(...item.bullets.map((bullet) => `- ${bullet}`))
-        return lines.join('\n')
-      })
-      return `EXPERIENCE\n${entries.join('\n\n')}`
+      return {
+        heading: 'EXPERIENCE',
+        separator: '\n\n',
+        entries: data.experience.map((item) => {
+          const lines: string[] = []
+          const head = [item.title, item.company].filter(Boolean).join(' | ')
+          if (head) lines.push(head)
+          const range = formatDateRange(item.startDate, item.endDate, item.current)
+          if (range) lines.push(range)
+          if (item.location) lines.push(item.location)
+          return { lines, bullets: item.bullets }
+        }),
+      }
     }
 
     case 'education': {
       if (!data.education.length) return null
-      const entries = data.education.map((item) => {
-        const head = [item.degree, item.school].filter(Boolean).join(' — ')
-        const range = formatDateRange(item.startDate, item.endDate)
-        const lines = [head]
-        if (range) lines.push(range)
-        if (item.gpa) lines.push(`GPA ${item.gpa}`)
-        return lines.join('\n')
-      })
-      return `EDUCATION\n${entries.join('\n\n')}`
+      return {
+        heading: 'EDUCATION',
+        separator: '\n\n',
+        entries: data.education.map((item) => {
+          const lines: string[] = []
+          const head = [item.degree, item.school].filter(Boolean).join(' — ')
+          if (head) lines.push(head)
+          const range = formatDateRange(item.startDate, item.endDate)
+          if (range) lines.push(range)
+          if (item.gpa) lines.push(`GPA ${item.gpa}`)
+          return { lines, bullets: [] }
+        }),
+      }
     }
 
     case 'skills': {
@@ -54,38 +87,53 @@ function sectionText(
         const group = skill.category ?? 'Core'
         groups.set(group, [...(groups.get(group) ?? []), skill.name])
       }
-      const lines = [...groups.entries()].map(
-        ([group, names]) => `${group}: ${names.join(', ')}`,
-      )
-      return `SKILLS\n${lines.join('\n')}`
+      return {
+        heading: 'SKILLS',
+        separator: '\n',
+        entries: [...groups.entries()].map(([group, names]) => ({
+          lines: [`${group}: ${names.join(', ')}`],
+          bullets: [],
+        })),
+      }
     }
 
     case 'projects': {
       if (!data.projects.length) return null
-      const entries = data.projects.map((item) => {
-        const lines = [item.name]
-        if (item.description) lines.push(item.description)
-        if (item.techStack.length) lines.push(item.techStack.join(', '))
-        if (item.link) lines.push(item.link)
-        return lines.join('\n')
-      })
-      return `PROJECTS\n${entries.join('\n\n')}`
+      return {
+        heading: 'PROJECTS',
+        separator: '\n\n',
+        entries: data.projects.map((item) => {
+          const lines = [item.name]
+          if (item.description) lines.push(item.description)
+          if (item.techStack.length) lines.push(item.techStack.join(', '))
+          if (item.link) lines.push(item.link)
+          return { lines, bullets: [] }
+        }),
+      }
     }
 
     case 'certifications': {
       if (!data.certifications.length) return null
-      const entries = data.certifications.map((item) =>
-        [item.name, item.issuer].filter(Boolean).join(' — '),
-      )
-      return `CERTIFICATIONS\n${entries.join('\n')}`
+      return {
+        heading: 'CERTIFICATIONS',
+        separator: '\n',
+        entries: data.certifications.map((item) => ({
+          lines: [[item.name, item.issuer].filter(Boolean).join(' — ')],
+          bullets: [],
+        })),
+      }
     }
 
     case 'languages': {
       if (!data.languages.length) return null
-      const entries = data.languages.map((item) =>
-        item.proficiency ? `${item.name} (${item.proficiency})` : item.name,
-      )
-      return `LANGUAGES\n${entries.join(', ')}`
+      return {
+        heading: 'LANGUAGES',
+        separator: ', ',
+        entries: data.languages.map((item) => ({
+          lines: [item.proficiency ? `${item.name} (${item.proficiency})` : item.name],
+          bullets: [],
+        })),
+      }
     }
 
     default:
@@ -93,19 +141,42 @@ function sectionText(
   }
 }
 
-/** Renders a tailored snapshot as the exact plain text an ATS parser reads. */
-export function renderAtsText(data: TailoredResumeData): string {
-  const parts: string[] = []
+export function buildResumeDocument(data: TailoredResumeData): ResumeDocument {
+  const contact =
+    data.sectionVisibility.contact !== false ? buildContact(data) : null
 
-  if (data.sectionVisibility.contact !== false) {
-    const contact = contactText(data)
-    if (contact) parts.push(contact)
-  }
-
+  const sections: ResumeSection[] = []
   for (const key of data.sectionOrder) {
     if (key === 'contact' || data.sectionVisibility[key] === false) continue
-    const text = sectionText(key, data)
-    if (text) parts.push(text)
+    const section = buildSection(key, data)
+    if (section && section.entries.length) sections.push(section)
+  }
+
+  return { contact, sections }
+}
+
+/** Renders a tailored snapshot as the exact plain text an ATS parser reads. */
+export function renderAtsText(data: TailoredResumeData): string {
+  const doc = buildResumeDocument(data)
+  const parts: string[] = []
+
+  if (doc.contact) {
+    const lines = [
+      doc.contact.fullName?.toUpperCase(),
+      doc.contact.line,
+    ].filter(Boolean) as string[]
+    if (lines.length) parts.push(lines.join('\n'))
+  }
+
+  for (const section of doc.sections) {
+    const body = section.entries
+      .map((entry) =>
+        [...entry.lines, ...entry.bullets.map((bullet) => `- ${bullet}`)].join(
+          '\n',
+        ),
+      )
+      .join(section.separator)
+    parts.push(`${section.heading}\n${body}`)
   }
 
   return parts.join('\n\n')

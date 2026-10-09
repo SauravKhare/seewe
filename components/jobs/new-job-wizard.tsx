@@ -3,11 +3,12 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Check, Download, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, FileText, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { AtsParsePanel } from '@/components/app/ats-parse-panel'
 import { Combobox } from '@/components/app/combobox'
+import { EmptyState } from '@/components/app/empty-state'
 import { Field } from '@/components/app/field'
 import { SectionLabel } from '@/components/app/section-label'
 import { SelectField } from '@/components/app/select-field'
@@ -21,8 +22,8 @@ import {
   SALARY_PERIOD_LABELS,
   WORK_MODE_LABELS,
 } from '@/lib/constants'
-import { useAppStore } from '@/lib/data/store'
-import { tailoredFromMaster } from '@/lib/tailoring'
+import { useAppStore, type CreateJobInput } from '@/lib/data/store'
+import { hasMaster, tailoredFromMaster } from '@/lib/tailoring'
 import type {
   EmploymentType,
   SalaryPeriod,
@@ -75,9 +76,7 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
     existingJob?.employmentType ?? '',
   )
   const [source, setSource] = useState(existingJob?.source ?? '')
-  const [appliedDate, setAppliedDate] = useState(
-    existingJob?.appliedDate ?? new Date().toISOString().slice(0, 10),
-  )
+  const [appliedDate, setAppliedDate] = useState(existingJob?.appliedDate ?? '')
   const [salaryMin, setSalaryMin] = useState(
     existingJob?.salaryMin ? String(existingJob.salaryMin) : '',
   )
@@ -113,18 +112,48 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
   })
 
   const [data, setData] = useState<TailoredResumeData | null>(null)
+  const [dirty, setDirty] = useState(false)
   const [mode, setMode] = useState<'visual' | 'ats'>('visual')
-  const [fileName, setFileName] = useState(
-    existingJob
-      ? `${companyName.toLowerCase().replace(/\s+/g, '-')}-resume.pdf`
-      : 'resume.pdf',
-  )
+  const [fileName, setFileName] = useState(() => {
+    const prior = existingJob
+      ? tailored
+          .filter((row) => row.jobApplicationId === existingJob.id)
+          .sort((a, b) => b.version - a.version)[0]?.fileName
+      : undefined
+    if (prior) return prior
+    const base = (companyName || position)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+    return base ? `${base}-resume.pdf` : 'resume.pdf'
+  })
   const [generating, setGenerating] = useState(false)
 
   const companyOptions = useMemo(
     () => companies.map((company) => ({ value: company.name, label: company.name })),
     [companies],
   )
+
+  if (!hasMaster(master)) {
+    return (
+      <div className="space-y-6">
+        <SectionLabel>New application</SectionLabel>
+        <EmptyState
+          icon={<FileText />}
+          title="Build your master resume first"
+          description="Tailoring copies your master, so it needs to exist before you can track a job and tailor a resume."
+          action={
+            <Link
+              href="/onboarding"
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+            >
+              Build your master
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
 
   function ensureTailored() {
     if (data) return
@@ -153,12 +182,13 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
     setSkills((current) => [...current, { name, required: true }])
   }
 
-  function downloadAndMarkApplied() {
-    if (!data || !fileName.trim()) return
-    setGenerating(true)
-    const store = useAppStore.getState()
-    const detailInput = {
-      companyName: companyName.trim(),
+  function handleDataChange(next: TailoredResumeData) {
+    setData(next)
+    setDirty(true)
+  }
+
+  function detailsPatch() {
+    return {
       position: position.trim(),
       jobDescription: jobDescription || undefined,
       jobUrl: jobUrl || undefined,
@@ -177,44 +207,84 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
       appliedDate: appliedDate || undefined,
       nextFollowUpDate: nextFollowUpDate || undefined,
       notes: notes || undefined,
+    }
+  }
+
+  function upsertJob(): string | undefined {
+    const store = useAppStore.getState()
+    if (existingJob) {
+      const company = companyName.trim()
+        ? store.createCompany(companyName.trim())
+        : undefined
+      store.updateJob(existingJob.id, {
+        ...detailsPatch(),
+        ...(company ? { companyId: company.id } : {}),
+      })
+      store.setJobSkills(existingJob.id, skills)
+      return existingJob.id
+    }
+    const input: CreateJobInput = {
+      ...detailsPatch(),
+      companyName: companyName.trim(),
+      position: position.trim(),
       skills,
     }
+    return store.createJob(input).id
+  }
 
-    let targetId = existingJob?.id
-    if (existingJob) {
-      store.updateJob(existingJob.id, {
-        position: position.trim(),
-        jobDescription: jobDescription || undefined,
-        jobUrl: jobUrl || undefined,
-        location: location || undefined,
-        workMode: workMode || undefined,
-        employmentType: employmentType || undefined,
-        salaryMin: salaryMin ? Number(salaryMin) : undefined,
-        salaryMax: salaryMax ? Number(salaryMax) : undefined,
-        salaryPeriod,
-        expectedSalary: expectedSalary ? Number(expectedSalary) : undefined,
-        equity: equity || undefined,
-        bonus: bonus || undefined,
-        benefits: benefits || undefined,
-        source: source || undefined,
-        appliedDate: appliedDate || undefined,
-        nextFollowUpDate: nextFollowUpDate || undefined,
-        notes: notes || undefined,
-      })
-    } else {
-      const created = store.createJob({ ...detailInput, status: 'saved' })
-      targetId = created.id
+  async function downloadAndMarkApplied() {
+    if (!data || !fileName.trim()) return
+    setGenerating(true)
+    try {
+      const { downloadResumePdf } = await import('@/lib/pdf/ats-document')
+      await downloadResumePdf(data, fileName.trim())
+    } catch {
+      toast.error('Could not generate the PDF. Try again.')
+      setGenerating(false)
+      return
     }
 
-    store.saveTailored({
-      jobApplicationId: targetId,
-      data,
-      fileName: fileName.trim(),
-      markApplied: existingJob?.status !== 'applied',
-    })
-
+    const targetId = upsertJob()
     setGenerating(false)
-    toast('Resume downloaded. Application marked applied.')
+    if (!targetId) return
+
+    const store = useAppStore.getState()
+    const job = store.jobs.find((row) => row.id === targetId)
+    const willApply = job?.status !== 'applied'
+    if (dirty) {
+      store.saveTailored({
+        jobApplicationId: targetId,
+        data,
+        fileName: fileName.trim(),
+        markApplied: willApply,
+      })
+    } else if (willApply) {
+      store.changeStatus(targetId, 'applied', 'Applied with tailored resume.')
+    }
+    setDirty(false)
+
+    toast(
+      willApply
+        ? 'Resume downloaded. Application marked applied.'
+        : 'Resume downloaded.',
+    )
+    router.push(`/jobs/${targetId}`)
+  }
+
+  function saveAsDraft() {
+    const targetId = upsertJob()
+    if (!targetId) return
+    if (dirty && data) {
+      useAppStore
+        .getState()
+        .saveTailored({
+          jobApplicationId: targetId,
+          data,
+          fileName: fileName.trim(),
+        })
+      setDirty(false)
+    }
+    toast('Draft saved. Not marked as applied.')
     router.push(`/jobs/${targetId}`)
   }
 
@@ -325,7 +395,10 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
                 onChange={(event) => setJobUrl(event.target.value)}
               />
             </Field>
-            <Field label="Applied date">
+            <Field
+              label="Applied date"
+              hint="Leave empty until you have applied."
+            >
               <Input
                 type="date"
                 value={appliedDate}
@@ -484,7 +557,7 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
             {data ? (
               <TailoringEditor
                 data={data}
-                onChange={setData}
+                onChange={handleDataChange}
                 jd={jobDescription}
                 jobSkills={skills}
                 mode={mode}
@@ -516,7 +589,7 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
         ) : null}
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Button
           type="button"
           variant="outline"
@@ -525,22 +598,25 @@ export function NewJobWizard({ jobId }: { jobId?: string }) {
         >
           <ArrowLeft className="size-3.5" /> Back
         </Button>
-        {step < STEPS.length - 1 ? (
+        <div className="flex items-center gap-2">
           <Button
             type="button"
-            onClick={goNext}
-            disabled={step === 0 && !detailsValid}
+            variant="outline"
+            onClick={saveAsDraft}
+            disabled={!detailsValid}
           >
-            Next <ArrowRight className="size-3.5" />
+            Save as draft
           </Button>
-        ) : (
-          <Link
-            href="/jobs"
-            className={cn(buttonVariants({ variant: 'ghost' }))}
-          >
-            Done
-          </Link>
-        )}
+          {step < STEPS.length - 1 ? (
+            <Button
+              type="button"
+              onClick={goNext}
+              disabled={step === 0 && !detailsValid}
+            >
+              Next <ArrowRight className="size-3.5" />
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   )

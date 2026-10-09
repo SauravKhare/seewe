@@ -3,18 +3,17 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, FileText, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { ArrowRight, Eye, EyeOff, FileText, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  DEMO_EMAIL,
-  DEMO_PASSWORD,
+  createAccount,
   setAuthCookie,
   validateCredentials,
 } from '@/lib/auth/fake-auth'
+import { cn } from '@/lib/utils'
 
 type Mode = 'sign-in' | 'sign-up'
 
@@ -32,7 +31,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  function validateField(field: 'email' | 'password' | 'confirm', value: string) {
+  function validateField(
+    field: 'email' | 'password' | 'confirm',
+    value: string,
+  ) {
     let message = ''
     if (field === 'email' && !EMAIL_RE.test(value.trim())) {
       message = 'Enter a valid email address.'
@@ -51,7 +53,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setFormError('')
 
     const nextErrors: Record<string, string> = {}
-    if (!EMAIL_RE.test(email.trim())) nextErrors.email = 'Enter a valid email address.'
+    if (!EMAIL_RE.test(email.trim()))
+      nextErrors.email = 'Enter a valid email address.'
     if (password.length < 8) nextErrors.password = 'Use at least 8 characters.'
     if (isSignUp && confirm !== password)
       nextErrors.confirm = 'Passwords do not match.'
@@ -61,13 +64,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setSubmitting(true)
     window.setTimeout(() => {
       if (isSignUp) {
+        if (!createAccount(email, password)) {
+          setSubmitting(false)
+          setFormError('An account with this email already exists.')
+          return
+        }
         setAuthCookie()
         router.push('/onboarding')
         return
       }
       if (!validateCredentials(email, password)) {
         setSubmitting(false)
-        setFormError('Use the demo email and password shown below.')
+        setFormError('Email or password is incorrect.')
         return
       }
       setAuthCookie()
@@ -92,49 +100,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </p>
       </div>
 
-      {!isSignUp ? (
-        <div className="text-muted-foreground mt-5 grid gap-1 rounded-md border border-dashed px-3.5 py-3 text-xs">
-          <strong className="text-focus text-[11px] tracking-[0.08em] uppercase">
-            Demo access
-          </strong>
-          <span>
-            <b className="text-foreground inline-block w-16 font-semibold">
-              Email
-            </b>{' '}
-            {DEMO_EMAIL}
-          </span>
-          <span>
-            <b className="text-foreground inline-block w-16 font-semibold">
-              Password
-            </b>{' '}
-            {DEMO_PASSWORD}
-          </span>
-        </div>
-      ) : null}
-
-      <div className="mt-6 grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => toast('Social sign-in arrives in Phase 2.')}
-        >
-          <span className="font-bold">G</span> Google
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => toast('Social sign-in arrives in Phase 2.')}
-        >
-          GitHub
-        </Button>
-      </div>
-
-      <div className="text-muted-foreground my-4 flex items-center gap-3 text-xs">
-        <span className="bg-border h-px flex-1" />
-        or
-        <span className="bg-border h-px flex-1" />
-      </div>
-
       <form onSubmit={handleSubmit} noValidate className="grid gap-4">
         <div className="grid gap-1.5">
           <Label htmlFor="email">Email</Label>
@@ -157,9 +122,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
         <div className="grid gap-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             placeholder="At least 8 characters"
             value={password}
@@ -177,9 +141,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
         {isSignUp ? (
           <div className="grid gap-1.5">
             <Label htmlFor="confirm">Confirm password</Label>
-            <Input
+            <PasswordInput
               id="confirm"
-              type="password"
               autoComplete="new-password"
               placeholder="Repeat your password"
               value={confirm}
@@ -220,6 +183,36 @@ export function AuthForm({ mode }: { mode: Mode }) {
           {isSignUp ? 'Sign in' : 'Create an account'}
         </Link>
       </p>
+    </div>
+  )
+}
+
+function PasswordInput({
+  className,
+  ...props
+}: React.ComponentProps<typeof Input>) {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <div className="relative">
+      <Input
+        {...props}
+        type={visible ? 'text' : 'password'}
+        className={cn('pr-9', className)}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((value) => !value)}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-1.5 -translate-y-1/2 rounded-md p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        {visible ? (
+          <EyeOff className="size-3.5" />
+        ) : (
+          <Eye className="size-3.5" />
+        )}
+      </button>
     </div>
   )
 }

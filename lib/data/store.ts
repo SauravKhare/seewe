@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+import { normalizeJobUrl } from '@/lib/format'
 import { createId, normalizeName } from '@/lib/id'
 import type {
   ApplicationStatus,
@@ -21,6 +22,7 @@ import type {
   MasterResumeData,
   MasterSection,
   Project,
+  PrunableMasterSection,
   ResumeSkill,
   SalaryPeriod,
   Skill,
@@ -114,11 +116,17 @@ interface AppState {
   removeResumeSkill: (id: string) => void
   ensureSkill: (name: string) => Skill
   reorderMasterSection: (section: MasterSection, orderedIds: string[]) => void
+  /** Drops untouched, blank rows from a half-finished master section. */
+  pruneMasterSection: (section: PrunableMasterSection) => void
 
   createCompany: (name: string) => Company
   updateCompany: (id: string, patch: Partial<Company>) => void
   createJob: (input: CreateJobInput) => JobApplication
   updateJob: (id: string, patch: Partial<JobApplication>) => void
+  setJobSkills: (
+    jobApplicationId: string,
+    skills: { name: string; required: boolean }[],
+  ) => void
   deleteJob: (id: string) => void
   changeStatus: (id: string, status: ApplicationStatus, note?: string) => void
 
@@ -138,6 +146,41 @@ const patched = <T extends { id: string }>(list: T[], item: T): T[] => {
     ? list.map((entry) => (entry.id === item.id ? item : entry))
     : [...list, item]
 }
+
+const hasText = (...values: (string | undefined | null)[]): boolean =>
+  values.some((value) => (value ?? '').trim().length > 0)
+
+/** A row is "untouched" when nothing in it has been filled in yet. */
+const experienceIsEmpty = (item: Experience): boolean =>
+  !hasText(
+    item.title,
+    item.company,
+    item.location,
+    item.startDate,
+    item.endDate,
+  ) &&
+  !item.current &&
+  !item.bullets.some((bullet) => bullet.trim().length > 0)
+
+const educationIsEmpty = (item: Education): boolean =>
+  !hasText(
+    item.school,
+    item.degree,
+    item.field,
+    item.gpa,
+    item.startDate,
+    item.endDate,
+  )
+
+const projectIsEmpty = (item: Project): boolean =>
+  !hasText(item.name, item.description, item.link) &&
+  item.techStack.length === 0
+
+const certificationIsEmpty = (item: Certification): boolean =>
+  !hasText(item.name, item.issuer, item.issuedDate, item.link)
+
+const languageIsEmpty = (item: Language): boolean =>
+  !hasText(item.name, item.proficiency)
 
 function initialState() {
   return {
@@ -173,10 +216,19 @@ export const useAppStore = create<AppState>()(
 
       resetDemo: () => set({ ...initialState(), hydrated: true }),
 
-      clearDemo: () =>
-        set((state) => ({
+      clearDemo: () => {
+        const timestamp = new Date().toISOString()
+        set({
           master: {
-            ...state.master,
+            resume: {
+              ...structuredClone(seedResume),
+              id: createId('resume'),
+              headline: '',
+              summary: '',
+              contact: {},
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            },
             experience: [],
             education: [],
             skills: [],
@@ -184,6 +236,7 @@ export const useAppStore = create<AppState>()(
             certifications: [],
             languages: [],
           },
+          companies: [],
           jobs: [],
           statusHistory: [],
           interviews: [],
@@ -191,7 +244,8 @@ export const useAppStore = create<AppState>()(
           attachments: [],
           jobSkills: [],
           tailored: [],
-        })),
+        })
+      },
 
       updateMaster: (patch) =>
         set((state) => ({
@@ -317,6 +371,58 @@ export const useAppStore = create<AppState>()(
           }
         }),
 
+      pruneMasterSection: (section) =>
+        set((state) => {
+          const master = state.master
+          switch (section) {
+            case 'experience':
+              return {
+                master: {
+                  ...master,
+                  experience: master.experience.filter(
+                    (item) => !experienceIsEmpty(item),
+                  ),
+                },
+              }
+            case 'education':
+              return {
+                master: {
+                  ...master,
+                  education: master.education.filter(
+                    (item) => !educationIsEmpty(item),
+                  ),
+                },
+              }
+            case 'projects':
+              return {
+                master: {
+                  ...master,
+                  projects: master.projects.filter(
+                    (item) => !projectIsEmpty(item),
+                  ),
+                },
+              }
+            case 'certifications':
+              return {
+                master: {
+                  ...master,
+                  certifications: master.certifications.filter(
+                    (item) => !certificationIsEmpty(item),
+                  ),
+                },
+              }
+            case 'languages':
+              return {
+                master: {
+                  ...master,
+                  languages: master.languages.filter(
+                    (item) => !languageIsEmpty(item),
+                  ),
+                },
+              }
+          }
+        }),
+
       ensureSkill: (name) => {
         const normalized = normalizeName(name)
         const existing = get().skills.find(
@@ -377,7 +483,7 @@ export const useAppStore = create<AppState>()(
           companyId: company.id,
           position: input.position,
           jobDescription: input.jobDescription,
-          jobUrl: input.jobUrl,
+          jobUrl: normalizeJobUrl(input.jobUrl),
           location: input.location,
           workMode: input.workMode,
           employmentType: input.employmentType,
@@ -427,10 +533,36 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           jobs: state.jobs.map((job) =>
             job.id === id
-              ? { ...job, ...patch, updatedAt: new Date().toISOString() }
+              ? {
+                  ...job,
+                  ...patch,
+                  jobUrl:
+                    patch.jobUrl === undefined
+                      ? job.jobUrl
+                      : normalizeJobUrl(patch.jobUrl),
+                  updatedAt: new Date().toISOString(),
+                }
               : job,
           ),
         })),
+
+      setJobSkills: (jobApplicationId, skills) => {
+        const rows: JobSkill[] = skills.map((entry) => ({
+          id: createId('js'),
+          jobApplicationId,
+          skillId: get().ensureSkill(entry.name).id,
+          required: entry.required,
+          source: 'manual',
+        }))
+        set((state) => ({
+          jobSkills: [
+            ...state.jobSkills.filter(
+              (row) => row.jobApplicationId !== jobApplicationId,
+            ),
+            ...rows,
+          ],
+        }))
+      },
 
       deleteJob: (id) =>
         set((state) => ({
@@ -448,10 +580,12 @@ export const useAppStore = create<AppState>()(
           jobSkills: state.jobSkills.filter(
             (row) => row.jobApplicationId !== id,
           ),
+          tailored: state.tailored.filter((row) => row.jobApplicationId !== id),
         })),
 
       changeStatus: (id, status, note) => {
         const timestamp = new Date().toISOString()
+        const today = timestamp.slice(0, 10)
         set((state) => ({
           jobs: state.jobs.map((job) =>
             job.id === id
@@ -459,6 +593,8 @@ export const useAppStore = create<AppState>()(
                   ...job,
                   status,
                   statusChangedAt: timestamp,
+                  appliedDate:
+                    job.appliedDate ?? (status === 'saved' ? undefined : today),
                   updatedAt: timestamp,
                 }
               : job,
@@ -558,6 +694,23 @@ export const useAppStore = create<AppState>()(
       name: 'seewe-store',
       version: 1,
       skipHydration: true,
+      // Only primitive/serialisable fields are written back; actions are
+      // dropped by JSON.stringify on write and merged in from the initial
+      // state on read.
+      partialize: (state) => ({
+        hydrated: false,
+        userId: state.userId,
+        master: state.master,
+        skills: state.skills,
+        companies: state.companies,
+        jobs: state.jobs,
+        statusHistory: state.statusHistory,
+        interviews: state.interviews,
+        contacts: state.contacts,
+        attachments: state.attachments,
+        jobSkills: state.jobSkills,
+        tailored: state.tailored,
+      }),
     },
   ),
 )

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { FileText, Plus, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Field } from '@/components/app/field'
 import { SelectField } from '@/components/app/select-field'
@@ -69,14 +68,9 @@ export function AttachmentsPanel({ jobId }: { jobId: string }) {
                   {ATTACHMENT_TYPE_LABELS[row.type]}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => toast('Download arrives in Phase 2.')}
-              >
-                Download
-              </Button>
+              <span className="text-muted-foreground hidden text-xs sm:inline">
+                No file yet
+              </span>
               <Button
                 type="button"
                 variant="ghost"

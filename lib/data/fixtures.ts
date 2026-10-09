@@ -1,4 +1,3 @@
-import { DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/auth/fake-auth'
 import {
   DEFAULT_SECTION_ORDER,
   DEFAULT_SECTION_VISIBILITY,
@@ -30,8 +29,7 @@ export const MASTER_RESUME_ID = 'resume_master'
 export const DEMO_USER = {
   id: USER_ID,
   name: 'Jane Doe',
-  email: DEMO_EMAIL,
-  password: DEMO_PASSWORD,
+  email: 'jane@example.com',
   initials: 'JD',
 }
 

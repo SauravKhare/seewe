@@ -68,12 +68,11 @@ export function AtsParsePanel({
       )}
 
       <p className="text-muted-foreground flex items-center gap-1.5 pt-3 text-[11px]">
-        <span
-          aria-hidden
-          className="bg-status-applied size-1.5 rounded-full"
-        />
+        <span aria-hidden className="bg-status-applied size-1.5 rounded-full" />
         Parsed as plain text
-        <span className="font-mono">· 98% readable</span>
+        <span className="font-mono">
+          · {atsText.split(/\s+/).filter(Boolean).length} words
+        </span>
       </p>
     </div>
   )

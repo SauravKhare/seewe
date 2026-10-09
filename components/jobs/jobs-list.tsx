@@ -45,18 +45,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  STATUS_LABELS,
-  STATUS_ORDER,
-  WORK_MODE_LABELS,
-} from '@/lib/constants'
+import { STATUS_LABELS, STATUS_ORDER, WORK_MODE_LABELS } from '@/lib/constants'
 import { useAppStore } from '@/lib/data/store'
-import { formatDate } from '@/lib/format'
-import type {
-  ApplicationStatus,
-  JobApplication,
-  WorkMode,
-} from '@/lib/types'
+import { effectiveAppliedDate, formatDate } from '@/lib/format'
+import type { ApplicationStatus, JobApplication, WorkMode } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type SortKey = 'updated' | 'applied' | 'company' | 'followup'
@@ -78,20 +70,27 @@ const WORK_MODE_OPTIONS = [
 
 const PAGE_SIZE = 10
 
+function appliedMeta(job: JobApplication): string {
+  const on = effectiveAppliedDate(job)
+  return on ? ` · ${formatDate(on)}` : ''
+}
+
 export function JobsList() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const jobs = useAppStore((state) => state.jobs)
   const companies = useAppStore((state) => state.companies)
 
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
   const [statuses, setStatuses] = useState<Set<ApplicationStatus>>(
     () => new Set(searchParams.getAll('status') as ApplicationStatus[]),
   )
   const [workMode, setWorkMode] = useState('all')
   const [sort, setSort] = useState<SortKey>('updated')
   const [page, setPage] = useState(0)
-  const [pendingDelete, setPendingDelete] = useState<JobApplication | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<JobApplication | null>(
+    null,
+  )
 
   const companyName = (id: string) =>
     companies.find((company) => company.id === id)?.name ?? 'Unknown'
@@ -112,7 +111,8 @@ export function JobsList() {
       if (statuses.size > 0 && !statuses.has(job.status)) return false
       if (workMode !== 'all' && job.workMode !== workMode) return false
       if (q) {
-        const haystack = `${companyName(job.companyId)} ${job.position}`.toLowerCase()
+        const haystack =
+          `${companyName(job.companyId)} ${job.position}`.toLowerCase()
         if (!haystack.includes(q)) return false
       }
       return true
@@ -121,9 +121,13 @@ export function JobsList() {
     rows = [...rows].sort((a, b) => {
       switch (sort) {
         case 'applied':
-          return (b.appliedDate ?? '').localeCompare(a.appliedDate ?? '')
+          return (effectiveAppliedDate(b) ?? '').localeCompare(
+            effectiveAppliedDate(a) ?? '',
+          )
         case 'company':
-          return companyName(a.companyId).localeCompare(companyName(b.companyId))
+          return companyName(a.companyId).localeCompare(
+            companyName(b.companyId),
+          )
         case 'followup':
           return (a.nextFollowUpDate ?? '9999').localeCompare(
             b.nextFollowUpDate ?? '9999',
@@ -240,7 +244,7 @@ export function JobsList() {
                 aria-pressed={active}
                 onClick={() => toggleStatus(status)}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                  'focus-visible:ring-ring rounded-full border px-2.5 py-1 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none',
                   active
                     ? 'border-foreground/20 bg-muted text-foreground font-medium'
                     : 'text-muted-foreground hover:bg-muted/60',
@@ -296,7 +300,7 @@ export function JobsList() {
                   key={job.id}
                   type="button"
                   onClick={() => router.push(`/jobs/${job.id}`)}
-                  className="flex w-full items-center gap-3 p-4 text-left"
+                  className="focus-visible:ring-ring flex w-full items-center gap-3 p-4 text-left focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
@@ -307,9 +311,7 @@ export function JobsList() {
                     </p>
                     <p className="text-muted-foreground mt-1 text-xs">
                       {job.location || '—'}
-                      {job.appliedDate
-                        ? ` · ${formatDate(job.appliedDate)}`
-                        : ''}
+                      {appliedMeta(job)}
                     </p>
                   </div>
                   <StatusPill status={job.status} />
@@ -317,94 +319,101 @@ export function JobsList() {
               ))}
             </div>
             <div className="hidden sm:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-5">Company</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden lg:table-cell">Location</TableHead>
-                  <TableHead className="hidden lg:table-cell">Work mode</TableHead>
-                  <TableHead className="hidden sm:table-cell">Applied</TableHead>
-                  <TableHead className="hidden xl:table-cell">
-                    Follow-up
-                  </TableHead>
-                  <TableHead className="pr-5 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageRows.map((job) => (
-                  <TableRow
-                    key={job.id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(`/jobs/${job.id}`)}
-                  >
-                    <TableCell className="pl-5 font-medium">
-                      {companyName(job.companyId)}
-                    </TableCell>
-                    <TableCell className="max-w-[16rem] truncate">
-                      {job.position}
-                    </TableCell>
-                    <TableCell>
-                      <StatusPill status={job.status} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground hidden lg:table-cell">
-                      {job.location || '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground hidden lg:table-cell">
-                      {job.workMode ? WORK_MODE_LABELS[job.workMode] : '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground hidden sm:table-cell">
-                      {formatDate(job.appliedDate) || '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground hidden xl:table-cell">
-                      {formatDate(job.nextFollowUpDate) || '—'}
-                    </TableCell>
-                    <TableCell
-                      className="pr-5 text-right"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          aria-label={`Actions for ${job.position}`}
-                          className={cn(
-                            buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
-                          )}
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => router.push(`/jobs/${job.id}`)}
-                          >
-                            Open
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => router.push(`/editor/${job.id}`)}
-                          >
-                            Tailor a new version
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              router.push(`/jobs/new?job=${job.id}`)
-                            }
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => setPendingDelete(job)}
-                          >
-                            <Trash2 className="size-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-5">Company</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Location
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Work mode
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Applied
+                    </TableHead>
+                    <TableHead className="hidden xl:table-cell">
+                      Follow-up
+                    </TableHead>
+                    <TableHead className="pr-5 text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {pageRows.map((job) => (
+                    <TableRow key={job.id} className="relative">
+                      <TableCell className="pl-5 font-medium">
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          aria-label={`Open ${job.position} at ${companyName(job.companyId)}`}
+                          className="focus-visible:ring-ring absolute inset-0 rounded-sm focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                        />
+                        {companyName(job.companyId)}
+                      </TableCell>
+                      <TableCell className="max-w-[16rem] truncate">
+                        {job.position}
+                      </TableCell>
+                      <TableCell>
+                        <StatusPill status={job.status} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden lg:table-cell">
+                        {job.location || '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden lg:table-cell">
+                        {job.workMode ? WORK_MODE_LABELS[job.workMode] : '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden sm:table-cell">
+                        {formatDate(effectiveAppliedDate(job)) || '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden xl:table-cell">
+                        {formatDate(job.nextFollowUpDate) || '—'}
+                      </TableCell>
+                      <TableCell className="relative z-10 pr-5 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            aria-label={`Actions for ${job.position}`}
+                            className={cn(
+                              buttonVariants({
+                                variant: 'ghost',
+                                size: 'icon-sm',
+                              }),
+                            )}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => router.push(`/jobs/${job.id}`)}
+                            >
+                              Open
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => router.push(`/editor/${job.id}`)}
+                            >
+                              Tailor a new version
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/jobs/new?job=${job.id}`)
+                              }
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => setPendingDelete(job)}
+                            >
+                              <Trash2 className="size-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
 
             {pageCount > 1 ? (
@@ -449,7 +458,7 @@ export function JobsList() {
             <AlertDialogTitle>Delete this application?</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDelete
-                ? `“${pendingDelete.position}” and its history, interviews, and contacts will be removed.`
+                ? `“${pendingDelete.position}” and everything attached to it — status history, interviews, contacts, attachments, and tailored resume versions — will be removed.`
                 : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -457,7 +466,8 @@ export function JobsList() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (pendingDelete) useAppStore.getState().deleteJob(pendingDelete.id)
+                if (pendingDelete)
+                  useAppStore.getState().deleteJob(pendingDelete.id)
                 setPendingDelete(null)
               }}
             >

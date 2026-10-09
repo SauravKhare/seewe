@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Download, FileText, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,7 +22,13 @@ import {
   WORK_MODE_LABELS,
 } from '@/lib/constants'
 import { useAppStore } from '@/lib/data/store'
-import { formatDate, formatSalary } from '@/lib/format'
+import {
+  effectiveAppliedDate,
+  formatDate,
+  formatSalary,
+  normalizeJobUrl,
+  safeJobHref,
+} from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 export function JobDetail({ jobId }: { jobId: string }) {
@@ -30,6 +37,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
   const tailored = useAppStore((state) => state.tailored)
   const attachments = useAppStore((state) => state.attachments)
   const contacts = useAppStore((state) => state.contacts)
+  const [downloading, setDownloading] = useState(false)
 
   if (!job) {
     return (
@@ -52,11 +60,31 @@ export function JobDetail({ jobId }: { jobId: string }) {
   }
 
   const company = companies.find((row) => row.id === job.companyId)
+  const jobHref = safeJobHref(job.jobUrl)
+  const jobUrlLabel = normalizeJobUrl(job.jobUrl)
+  const appliedOn = effectiveAppliedDate(job)
 
   const versions = tailored
     .filter((row) => row.jobApplicationId === job.id)
     .sort((a, b) => b.version - a.version)
   const current = versions[0]
+
+  async function downloadCurrent() {
+    if (!current) return
+    setDownloading(true)
+    try {
+      const { downloadResumePdf } = await import('@/lib/pdf/ats-document')
+      await downloadResumePdf(
+        current.data,
+        current.fileName ?? `resume-v${current.version}.pdf`,
+      )
+      toast('PDF downloaded.')
+    } catch {
+      toast.error('Could not generate the PDF. Try again.')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const jobAttachments = attachments.filter(
     (row) => row.jobApplicationId === job.id,
@@ -93,8 +121,8 @@ export function JobDetail({ jobId }: { jobId: string }) {
         />
         <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-sm">
           <StatusPill status={job.status} />
-          {job.appliedDate ? (
-            <span>Applied {formatDate(job.appliedDate)}</span>
+          {appliedOn ? (
+            <span>Applied {formatDate(appliedOn)}</span>
           ) : (
             <span>Not applied yet</span>
           )}
@@ -145,14 +173,14 @@ export function JobDetail({ jobId }: { jobId: string }) {
                   <DetailRow label="Equity" value={job.equity} />
                   <DetailRow label="Bonus" value={job.bonus} />
                 </dl>
-                {job.jobUrl ? (
+                {jobHref ? (
                   <a
-                    href={`https://${job.jobUrl}`}
+                    href={jobHref}
                     target="_blank"
                     rel="noreferrer"
                     className="text-focus mt-4 inline-block text-xs hover:underline"
                   >
-                    {job.jobUrl}
+                    {jobUrlLabel}
                   </a>
                 ) : null}
               </Panel>
@@ -201,11 +229,11 @@ export function JobDetail({ jobId }: { jobId: string }) {
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          toast('Download arrives in Phase 2.')
-                        }
+                        disabled={downloading}
+                        onClick={() => void downloadCurrent()}
                       >
-                        <Download className="size-3.5" /> Download
+                        <Download className="size-3.5" />
+                        {downloading ? 'Generating…' : 'Download'}
                       </Button>
                       <Link
                         href={`/editor/${job.id}`}

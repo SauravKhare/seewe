@@ -37,8 +37,8 @@ export default function LandingPage() {
             Resume intelligence for your job search
           </SectionLabel>
           <h1 className="text-4xl font-semibold tracking-[-0.04em] sm:text-5xl sm:leading-[1.05]">
-            Tailor your resume{' '}
-            <span className="text-focus">before</span> the machine reads it.
+            Tailor your resume <span className="text-focus">before</span> the
+            machine reads it.
           </h1>
           <p className="text-muted-foreground max-w-md text-base leading-relaxed">
             Paste a job description, edit a copy of your master resume to match
@@ -60,9 +60,6 @@ export default function LandingPage() {
           </div>
           <div className="text-muted-foreground flex flex-wrap items-center gap-5 text-xs">
             <span className="flex items-center gap-1.5">
-              <Check className="size-3.5" /> No credit card required
-            </span>
-            <span className="flex items-center gap-1.5">
               <Check className="size-3.5" /> Your data stays private
             </span>
           </div>
@@ -82,7 +79,9 @@ export default function LandingPage() {
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <h3 className="mt-3 text-base font-semibold">{step.title}</h3>
-                <p className="text-muted-foreground mt-1 text-sm">{step.body}</p>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {step.body}
+                </p>
               </div>
             ))}
           </div>
@@ -92,7 +91,8 @@ export default function LandingPage() {
       <section className="border-t">
         <div className="text-muted-foreground mx-auto flex max-w-6xl items-center gap-2 px-6 py-6 text-xs">
           <Sparkles className="size-4" />
-          Per-user isolation, private file storage, signed download links.
+          Local-first for now: your resume data stays in this browser. Accounts
+          and cloud storage arrive with the backend.
         </div>
       </section>
     </main>

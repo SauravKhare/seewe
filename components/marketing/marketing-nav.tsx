@@ -11,14 +11,14 @@ export function MarketingNav() {
           seewe<span className="text-focus">.</span>
         </Link>
         <div className="text-muted-foreground hidden items-center gap-7 text-sm md:flex">
-          <a href="#product" className="hover:text-foreground transition-colors">
+          <a
+            href="#product"
+            className="hover:text-foreground transition-colors"
+          >
             Product
           </a>
           <a href="#how" className="hover:text-foreground transition-colors">
             How it works
-          </a>
-          <a href="#pricing" className="hover:text-foreground transition-colors">
-            Pricing
           </a>
         </div>
         <div className="flex items-center gap-2">
@@ -28,10 +28,7 @@ export function MarketingNav() {
           >
             Sign in
           </Link>
-          <Link
-            href="/sign-up"
-            className={cn(buttonVariants({ size: 'sm' }))}
-          >
+          <Link href="/sign-up" className={cn(buttonVariants({ size: 'sm' }))}>
             Start free
           </Link>
         </div>

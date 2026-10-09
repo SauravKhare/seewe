@@ -34,7 +34,7 @@ export function SegmentedControl<T extends string>({
             aria-selected={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              'rounded-[4px] px-2.5 py-1 text-xs font-medium transition-colors duration-150',
+              'focus-visible:ring-ring flex-1 rounded-[4px] px-2.5 py-1 text-center text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none',
               active
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground',

@@ -1,9 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Check, Circle, Plus, Sparkles, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Circle,
+  Plus,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { BulletListEditor } from '@/components/app/bullet-list-editor'
@@ -15,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useAppStore } from '@/lib/data/store'
+import { formatRelativeTime } from '@/lib/format'
 import { createId } from '@/lib/id'
 import type {
   Certification,
@@ -23,6 +32,7 @@ import type {
   Language,
   MasterResumeData,
   Project,
+  PrunableMasterSection,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -93,7 +103,27 @@ const SECTIONS: {
   },
 ]
 
-function sectionComplete(key: SectionKey, master: MasterResumeData): boolean {
+type SkillName = (skillId: string) => string
+
+/** Sections whose rows can be pruned when the user moves on. */
+const PRUNABLE_SECTIONS = new Set<SectionKey>([
+  'experience',
+  'education',
+  'projects',
+  'certifications',
+  'languages',
+])
+
+function hasText(...values: (string | undefined | null)[]): boolean {
+  return values.some((value) => (value ?? '').trim().length > 0)
+}
+
+/** A section counts as done only when a row has a real, identifying value. */
+function sectionComplete(
+  key: SectionKey,
+  master: MasterResumeData,
+  skillName: SkillName,
+): boolean {
   switch (key) {
     case 'headline':
       return master.resume.headline.trim().length > 0
@@ -101,16 +131,31 @@ function sectionComplete(key: SectionKey, master: MasterResumeData): boolean {
       return master.resume.summary.trim().length > 0
     case 'contact':
       return Boolean(master.resume.contact.fullName?.trim())
+    case 'experience':
+      return master.experience.some((item) => hasText(item.title, item.company))
+    case 'education':
+      return master.education.some((item) => hasText(item.school, item.degree))
+    case 'skills':
+      return master.skills.some((item) => hasText(skillName(item.skillId)))
+    case 'projects':
+      return master.projects.some((item) => hasText(item.name))
+    case 'certifications':
+      return master.certifications.some((item) => hasText(item.name))
+    case 'languages':
+      return master.languages.some((item) => hasText(item.name))
     default:
-      return master[key].length > 0
+      return false
   }
 }
 
-function masterComplete(master: MasterResumeData): boolean {
+function masterComplete(
+  master: MasterResumeData,
+  skillName: SkillName,
+): boolean {
   return (
-    master.experience.length > 0 &&
-    master.education.length > 0 &&
-    master.skills.length > 0
+    sectionComplete('experience', master, skillName) &&
+    sectionComplete('education', master, skillName) &&
+    sectionComplete('skills', master, skillName)
   )
 }
 
@@ -147,13 +192,7 @@ function ItemCard({
   )
 }
 
-function AddButton({
-  label,
-  onClick,
-}: {
-  label: string
-  onClick: () => void
-}) {
+function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <Button type="button" variant="outline" size="sm" onClick={onClick}>
       <Plus className="size-3.5" /> {label}
@@ -164,17 +203,49 @@ function AddButton({
 export function OnboardingBuilder() {
   const router = useRouter()
   const master = useAppStore((state) => state.master)
+  const catalog = useAppStore((state) => state.skills)
   const [active, setActive] = useState<SectionKey>('headline')
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  const skillName: SkillName = (skillId) =>
+    catalog.find((skill) => skill.id === skillId)?.name ?? ''
 
   const completedCount = SECTIONS.filter((section) =>
-    sectionComplete(section.key, master),
+    sectionComplete(section.key, master, skillName),
   ).length
   const progress = Math.round((completedCount / SECTIONS.length) * 100)
-  const complete = masterComplete(master)
+  const complete = masterComplete(master, skillName)
   const activeIndex = SECTIONS.findIndex((section) => section.key === active)
   const activeSection = SECTIONS[activeIndex]
 
   const store = useAppStore.getState.bind(useAppStore)
+
+  useEffect(() => {
+    const unsub = useAppStore.subscribe((state, previous) => {
+      if (state.master !== previous.master) setLastSavedAt(Date.now())
+    })
+    return unsub
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  function goTo(section: SectionKey) {
+    if (section === active) return
+    if (PRUNABLE_SECTIONS.has(active)) {
+      store().pruneMasterSection(active as PrunableMasterSection)
+    }
+    setActive(section)
+  }
+
+  function step(delta: number) {
+    const next = activeIndex + delta
+    if (next < 0 || next >= SECTIONS.length) return
+    goTo(SECTIONS[next].key)
+  }
 
   function newExperience(): Experience {
     return {
@@ -748,6 +819,9 @@ export function OnboardingBuilder() {
   }
 
   function onContinue() {
+    if (PRUNABLE_SECTIONS.has(active)) {
+      store().pruneMasterSection(active as PrunableMasterSection)
+    }
     toast('Master resume saved.')
     router.push('/dashboard')
   }
@@ -765,7 +839,10 @@ export function OnboardingBuilder() {
             {String(SECTIONS.length).padStart(2, '0')}
           </span>
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <Check className="size-3.5" /> Saved just now
+            <Check className="size-3.5" />
+            {lastSavedAt
+              ? `Saved ${formatRelativeTime(lastSavedAt, now)}`
+              : 'Nothing changed yet'}
           </span>
         </div>
       </header>
@@ -786,13 +863,13 @@ export function OnboardingBuilder() {
             </div>
             <nav className="mt-3 space-y-0.5">
               {SECTIONS.map((section) => {
-                const done = sectionComplete(section.key, master)
+                const done = sectionComplete(section.key, master, skillName)
                 const isActive = section.key === active
                 return (
                   <button
                     key={section.key}
                     type="button"
-                    onClick={() => setActive(section.key)}
+                    onClick={() => goTo(section.key)}
                     className={cn(
                       'flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm transition-colors',
                       isActive
@@ -839,16 +916,36 @@ export function OnboardingBuilder() {
           </section>
         </div>
 
-        <div className="mt-10 flex flex-col items-end gap-2 border-t pt-6">
-          <Button type="button" onClick={onContinue} disabled={!complete}>
-            Save and continue
-          </Button>
-          {!complete ? (
-            <p className="text-muted-foreground text-xs">
-              Add at least one experience, education entry, and skill to
-              continue.
-            </p>
-          ) : null}
+        <div className="mt-10 flex flex-wrap items-start justify-between gap-4 border-t pt-6">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={activeIndex === 0}
+              onClick={() => step(-1)}
+            >
+              <ArrowLeft className="size-3.5" /> Back
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={activeIndex >= SECTIONS.length - 1}
+              onClick={() => step(1)}
+            >
+              Next <ArrowRight className="size-3.5" />
+            </Button>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Button type="button" onClick={onContinue} disabled={!complete}>
+              Save and continue
+            </Button>
+            {!complete ? (
+              <p className="text-muted-foreground max-w-xs text-right text-xs">
+                Add at least one experience, education entry, and skill to
+                continue.
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

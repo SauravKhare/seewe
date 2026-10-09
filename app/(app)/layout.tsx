@@ -1,9 +1,14 @@
 import { AppShell } from '@/components/app/app-shell'
+import { StoreGate } from '@/components/store-gate'
 
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <AppShell>{children}</AppShell>
+  return (
+    <AppShell>
+      <StoreGate>{children}</StoreGate>
+    </AppShell>
+  )
 }

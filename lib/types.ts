@@ -214,6 +214,22 @@ export interface JobAttachment {
 }
 
 /**
+ * Rows the user pulled out of the tailored copy, kept aside so they can be
+ * restored. Never rendered to PDF or ATS text.
+ */
+export interface RemovedItems {
+  experience: TailoredExperience[]
+  education: TailoredEducation[]
+  skills: TailoredSkill[]
+  projects: TailoredProject[]
+  certifications: TailoredCertification[]
+  languages: TailoredLanguage[]
+}
+
+/** Tailored collections that support remove-and-restore. */
+export type ListKey = keyof RemovedItems
+
+/**
  * Full JSONB snapshot stored on a tailored resume version. Self-contained: no
  * foreign keys back to the master, so re-tailoring never touches master data.
  */
@@ -229,6 +245,8 @@ export interface TailoredResumeData {
   languages: TailoredLanguage[]
   sectionOrder: ResumeSectionKey[]
   sectionVisibility: Record<ResumeSectionKey, boolean>
+  /** Absent on snapshots written before the removed tray existed. */
+  removed?: RemovedItems
 }
 
 export interface TailoredExperience {
@@ -307,3 +325,7 @@ export interface MasterResumeData {
   certifications: Certification[]
   languages: Language[]
 }
+
+/** Master collections that can hold half-finished, prunable rows. */
+export type PrunableMasterSection =
+  'experience' | 'education' | 'projects' | 'certifications' | 'languages'

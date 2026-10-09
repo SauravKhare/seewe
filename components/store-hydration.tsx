@@ -5,13 +5,16 @@ import { useEffect } from 'react'
 import { useAppStore } from '@/lib/data/store'
 
 /**
- * Rehydrates the persisted store on the client. SSR renders the fixture seed,
- * then persisted edits take over after mount, avoiding hydration mismatches.
+ * Rehydrates the persisted store on the client, then marks the store ready.
+ * SSR renders skeletons (see `StoreGate`), so persisted data never races a
+ * component's initial state.
  */
 export function StoreHydration() {
   useEffect(() => {
-    void useAppStore.persist.rehydrate()
-    useAppStore.getState().setHydrated(true)
+    const result = useAppStore.persist.rehydrate()
+    void Promise.resolve(result).then(() => {
+      useAppStore.getState().setHydrated(true)
+    })
   }, [])
 
   return null

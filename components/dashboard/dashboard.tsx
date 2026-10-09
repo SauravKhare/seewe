@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/table'
 import { STATUS_DOT_CLASS, STATUS_LABELS } from '@/lib/constants'
 import { useAppStore } from '@/lib/data/store'
-import { formatDate } from '@/lib/format'
+import { effectiveAppliedDate, formatDate } from '@/lib/format'
+import { hasMaster } from '@/lib/tailoring'
 import type { ApplicationStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -66,6 +67,8 @@ export function Dashboard() {
   const router = useRouter()
   const jobs = useAppStore((state) => state.jobs)
   const companies = useAppStore((state) => state.companies)
+  const master = useAppStore((state) => state.master)
+  const canTailor = hasMaster(master)
 
   const companyName = (id: string) =>
     companies.find((company) => company.id === id)?.name ?? 'Unknown'
@@ -111,8 +114,10 @@ export function Dashboard() {
                   <Plus className="size-3.5" /> Add your first job
                 </Link>
                 <Link
-                  href="/jobs/new"
-                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+                  href={canTailor ? '/editor/new' : '/onboarding'}
+                  className={cn(
+                    buttonVariants({ variant: 'outline', size: 'sm' }),
+                  )}
                 >
                   Tailor a resume without a job
                 </Link>
@@ -186,7 +191,7 @@ export function Dashboard() {
                   <button
                     type="button"
                     onClick={() => router.push(`/jobs/${job.id}`)}
-                    className="min-w-0 flex-1 text-left"
+                    className="focus-visible:ring-ring min-w-0 flex-1 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <span className="block truncate text-sm font-medium">
                       {companyName(job.companyId)}
@@ -245,7 +250,7 @@ export function Dashboard() {
               key={job.id}
               type="button"
               onClick={() => router.push(`/jobs/${job.id}`)}
-              className="flex w-full items-center gap-3 p-4 text-left"
+              className="focus-visible:ring-ring flex w-full items-center gap-3 p-4 text-left focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
@@ -260,58 +265,60 @@ export function Dashboard() {
           ))}
         </div>
         <div className="hidden sm:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-5">Company</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden sm:table-cell">Applied</TableHead>
-              <TableHead className="pr-5 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recent.map((job) => (
-              <TableRow
-                key={job.id}
-                className="cursor-pointer"
-                onClick={() => router.push(`/jobs/${job.id}`)}
-              >
-                <TableCell className="pl-5 font-medium">
-                  {companyName(job.companyId)}
-                </TableCell>
-                <TableCell className="max-w-[16rem] truncate">
-                  {job.position}
-                </TableCell>
-                <TableCell>
-                  <StatusPill status={job.status} />
-                </TableCell>
-                <TableCell className="text-muted-foreground hidden sm:table-cell">
-                  {formatDate(job.appliedDate) || '—'}
-                </TableCell>
-                <TableCell
-                  className="pr-5 text-right"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div className="flex items-center justify-end gap-1">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-5">Company</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="hidden sm:table-cell">Applied</TableHead>
+                <TableHead className="pr-5 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recent.map((job) => (
+                <TableRow key={job.id} className="relative">
+                  <TableCell className="pl-5 font-medium">
                     <Link
                       href={`/jobs/${job.id}`}
-                      className={cn(buttonVariants({ variant: 'ghost', size: 'xs' }))}
-                    >
-                      View
-                    </Link>
-                    <Link
-                      href={`/editor/${job.id}`}
-                      className={cn(buttonVariants({ variant: 'ghost', size: 'xs' }))}
-                    >
-                      Tailor
-                    </Link>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                      aria-label={`Open ${job.position} at ${companyName(job.companyId)}`}
+                      className="focus-visible:ring-ring absolute inset-0 rounded-sm focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                    />
+                    {companyName(job.companyId)}
+                  </TableCell>
+                  <TableCell className="max-w-[16rem] truncate">
+                    {job.position}
+                  </TableCell>
+                  <TableCell>
+                    <StatusPill status={job.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground hidden sm:table-cell">
+                    {formatDate(effectiveAppliedDate(job)) || '—'}
+                  </TableCell>
+                  <TableCell className="relative z-10 pr-5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        className={cn(
+                          buttonVariants({ variant: 'ghost', size: 'xs' }),
+                        )}
+                      >
+                        View
+                      </Link>
+                      <Link
+                        href={`/editor/${job.id}`}
+                        className={cn(
+                          buttonVariants({ variant: 'ghost', size: 'xs' }),
+                        )}
+                      >
+                        Tailor
+                      </Link>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </Panel>
 

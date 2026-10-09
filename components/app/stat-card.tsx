@@ -15,7 +15,8 @@ export function StatCard({
   onClick?: () => void
   className?: string
 }) {
-  const display = typeof count === 'number' ? String(count).padStart(2, '0') : count
+  const display =
+    typeof count === 'number' ? String(count).padStart(2, '0') : count
 
   const content = (
     <>
@@ -35,7 +36,14 @@ export function StatCard({
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={cn(shared, 'hover:bg-muted/50')}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          shared,
+          'hover:bg-muted/50 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+        )}
+      >
         {content}
       </button>
     )

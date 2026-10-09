@@ -11,9 +11,6 @@ export default function AuthLayout({
         seewe<span className="text-focus">.</span>
       </Link>
       <div className="mt-8 w-full max-w-sm">{children}</div>
-      <p className="text-muted-foreground mt-6 text-[11px]">
-        Demo UI only — no account or data is saved.
-      </p>
     </div>
   )
 }

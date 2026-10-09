@@ -1,6 +1,8 @@
 'use client'
 
+import { useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -8,18 +10,28 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { clearAuthCookie } from '@/lib/auth/fake-auth'
 import { DEMO_USER } from '@/lib/data/fixtures'
 
+const emptySubscribe = () => () => {}
+
 export function UserMenu() {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  )
 
   function signOut() {
     clearAuthCookie()
-    router.push('/')
+    router.push('/sign-in')
     router.refresh()
   }
 
@@ -27,7 +39,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Account menu"
-        className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="focus-visible:ring-ring rounded-full outline-none focus-visible:ring-2"
       >
         <Avatar size="sm">
           <AvatarFallback>{DEMO_USER.initials}</AvatarFallback>
@@ -50,6 +62,19 @@ export function UserMenu() {
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        {mounted ? (
+          <>
+            <DropdownMenuLabel>Theme</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+              <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="system">
+                System
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         <DropdownMenuItem variant="destructive" onClick={signOut}>
           Sign out
         </DropdownMenuItem>

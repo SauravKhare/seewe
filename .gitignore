@@ -23,3 +23,7 @@ build/
 # logs
 npm-debug.log*
 pnpm-debug.log*
+
+.data/
+seewe-ui-specification.zip
+
