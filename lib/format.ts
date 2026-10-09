@@ -12,6 +12,14 @@ const DAY_FORMAT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 })
 
+const DATETIME_FORMAT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
 /** Accepts `YYYY-MM` or `YYYY-MM-DD` and returns a short label. */
 export function formatMonth(value?: string): string {
   if (!value) return ''
@@ -25,6 +33,13 @@ export function formatDate(value?: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return DAY_FORMAT.format(date)
+}
+
+export function formatDateTime(value?: string): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return DATETIME_FORMAT.format(date)
 }
 
 export function formatDateRange(

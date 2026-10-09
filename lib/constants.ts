@@ -1,5 +1,6 @@
 import type {
   ApplicationStatus,
+  AttachmentType,
   EmploymentType,
   InterviewType,
   ResumeSectionKey,
@@ -67,6 +68,12 @@ export const INTERVIEW_TYPE_LABELS: Record<InterviewType, string> = {
   technical: 'Technical',
   onsite: 'Onsite',
   virtual: 'Virtual',
+}
+
+export const ATTACHMENT_TYPE_LABELS: Record<AttachmentType, string> = {
+  resume: 'Resume',
+  cover_letter: 'Cover letter',
+  jd: 'Job description',
 }
 
 export const SECTION_LABELS: Record<ResumeSectionKey, string> = {
