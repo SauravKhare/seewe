@@ -23,6 +23,3 @@ build/
 # logs
 npm-debug.log*
 pnpm-debug.log*
-
-# reference mockup (kept for visual reference until Phase 1 port is verified)
-# seewe-ui-demo/

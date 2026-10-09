@@ -96,6 +96,7 @@ interface AppState {
 
   setHydrated: (value: boolean) => void
   resetDemo: () => void
+  clearDemo: () => void
 
   updateMaster: (patch: Partial<MasterResumeData['resume']>) => void
 
@@ -171,6 +172,26 @@ export const useAppStore = create<AppState>()(
       setHydrated: (value) => set({ hydrated: value }),
 
       resetDemo: () => set({ ...initialState(), hydrated: true }),
+
+      clearDemo: () =>
+        set((state) => ({
+          master: {
+            ...state.master,
+            experience: [],
+            education: [],
+            skills: [],
+            projects: [],
+            certifications: [],
+            languages: [],
+          },
+          jobs: [],
+          statusHistory: [],
+          interviews: [],
+          contacts: [],
+          attachments: [],
+          jobSkills: [],
+          tailored: [],
+        })),
 
       updateMaster: (patch) =>
         set((state) => ({

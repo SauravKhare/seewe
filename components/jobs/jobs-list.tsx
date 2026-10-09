@@ -290,6 +290,33 @@ export function JobsList() {
           />
         ) : (
           <>
+            <div className="divide-y sm:hidden">
+              {pageRows.map((job) => (
+                <button
+                  key={job.id}
+                  type="button"
+                  onClick={() => router.push(`/jobs/${job.id}`)}
+                  className="flex w-full items-center gap-3 p-4 text-left"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {companyName(job.companyId)}
+                    </p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {job.position}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {job.location || '—'}
+                      {job.appliedDate
+                        ? ` · ${formatDate(job.appliedDate)}`
+                        : ''}
+                    </p>
+                  </div>
+                  <StatusPill status={job.status} />
+                </button>
+              ))}
+            </div>
+            <div className="hidden sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -378,6 +405,7 @@ export function JobsList() {
                 ))}
               </TableBody>
             </Table>
+            </div>
 
             {pageCount > 1 ? (
               <div className="flex items-center justify-between border-t px-5 py-3">

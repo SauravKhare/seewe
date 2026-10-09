@@ -55,6 +55,9 @@ export function StatusTimeline({ jobId }: { jobId: string }) {
 
   return (
     <div className="space-y-4">
+      <p className="sr-only" role="status" aria-live="polite">
+        {job ? `Current status: ${STATUS_LABELS[job.status]}` : ''}
+      </p>
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold">Status timeline</h2>
         <Button type="button" variant="outline" size="sm" onClick={openDialog}>

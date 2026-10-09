@@ -138,6 +138,37 @@ export function Settings() {
 
       <Panel className="p-5">
         <PanelHeader
+          title="Demo data"
+          description="Preview empty states or restore the seed dataset."
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              useAppStore.getState().clearDemo()
+              toast('Empty states enabled.')
+            }}
+          >
+            Preview empty states
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              useAppStore.getState().resetDemo()
+              toast('Demo data restored.')
+            }}
+          >
+            Reset demo data
+          </Button>
+        </div>
+      </Panel>
+
+      <Panel className="p-5">
+        <PanelHeader
           title="Privacy and data"
           description="Your data is isolated per user and stored privately. Downloads use signed links."
         />
