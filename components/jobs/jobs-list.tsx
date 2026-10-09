@@ -353,7 +353,7 @@ export function JobsList() {
                             Open
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => router.push(`/jobs/${job.id}`)}
+                            onClick={() => router.push(`/editor/${job.id}`)}
                           >
                             Tailor a new version
                           </DropdownMenuItem>

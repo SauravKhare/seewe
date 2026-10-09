@@ -280,7 +280,7 @@ export function Dashboard() {
                       View
                     </Link>
                     <Link
-                      href={`/jobs/${job.id}`}
+                      href={`/editor/${job.id}`}
                       className={cn(buttonVariants({ variant: 'ghost', size: 'xs' }))}
                     >
                       Tailor
